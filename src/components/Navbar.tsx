@@ -67,7 +67,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       ? 'text-white' 
                       : 'bg-gradient-to-r from-[#6C2BD9] via-purple-700 to-[#FF4D8D] bg-clip-text text-transparent'
                   }`}>
-                    HerPath
+                    SAHAAT
                   </span>
                   {!isLowSignalGlobal && (
                     <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-700 border border-purple-200">
@@ -79,7 +79,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <p className={`text-[11px] font-medium tracking-wide hidden sm:block ${
                   isLowSignalGlobal ? 'text-amber-400 font-mono' : 'text-slate-500'
                 }`}>
-                  Context-Aware Journey Companion
+                  Har Safar Mein Raahat
                 </p>
               </div>
             </div>

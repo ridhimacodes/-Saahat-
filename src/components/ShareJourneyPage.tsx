@@ -28,7 +28,7 @@ export const ShareJourneyPage: React.FC<ShareJourneyPageProps> = ({
   const contactName = useCustomContact ? (customName || "Trusted Contact") : selectedContact.name;
   const contactPhone = useCustomContact ? (customPhone || "+1 (555) 000-0000") : selectedContact.phone;
 
-  const generatedMessage = `I'm heading home via ${selectedRoute.name.split('—')[0].trim()} (${selectedRoute.durationMinutes} mins), expected arrival by ${arrivalTime}. Powered by HerPath.`;
+  const generatedMessage = `I'm heading home via ${selectedRoute.name.split('—')[0].trim()} (${selectedRoute.durationMinutes} mins), expected arrival by ${arrivalTime}. Powered by SAHAAT.`;
 
   const handleShareETA = (e: React.FormEvent) => {
     e.preventDefault();
@@ -276,7 +276,7 @@ export const ShareJourneyPage: React.FC<ShareJourneyPageProps> = ({
         <div className="bg-purple-50/70 p-3.5 rounded-2xl border border-purple-100 text-xs text-purple-900 flex items-center justify-center gap-2 text-center">
           <Lock className="w-4 h-4 text-brand-purple flex-shrink-0" />
           <span>
-            <strong>Privacy Assurance:</strong> This is a one-time message. HerPath never continuously tracks or stores your live GPS location.
+            <strong>Privacy Assurance:</strong> This is a one-time message. SAHAAT never continuously tracks or stores your live GPS location.
           </span>
         </div>
 

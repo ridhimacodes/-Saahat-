@@ -129,7 +129,7 @@ export const RouteResultsPage: React.FC<RouteResultsPageProps> = ({
           <div className="p-4 rounded-2xl text-xs bg-white border border-[#E8D8D3] text-[#6E4B59] flex items-start gap-2.5 shadow-2xs">
             <AlertCircle className="w-4 h-4 text-[#A3526B] flex-shrink-0 mt-0.5" />
             <p className="leading-relaxed">
-              <strong>Context Disclaimer:</strong> HerPath evaluates factual environmental signals (lighting, footfall, transit, open businesses) to give you total control.
+              <strong>Context Disclaimer:</strong> SAHAAT evaluates factual environmental signals (lighting, footfall, transit, open businesses) to give you total control.
             </p>
           </div>
         </div>

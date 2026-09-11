@@ -26,7 +26,7 @@ export const AboutPrivacyPage: React.FC<AboutPrivacyPageProps> = ({
           Trust & Privacy at the Core
         </h1>
         <p className="text-slate-600 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
-          HerPath is built to empower women with real environmental context while respecting absolute data dignity.
+          SAHAAT is built to empower women with real environmental context while respecting absolute data dignity.
         </p>
       </div>
 
@@ -133,7 +133,7 @@ export const AboutPrivacyPage: React.FC<AboutPrivacyPageProps> = ({
               <XCircle className="w-5 h-5 text-pink-500 flex-shrink-0 mt-0.5" />
               <div>
                 <strong className="text-slate-900 block font-bold">No Selling User Data</strong>
-                <span>HerPath is independent and free from third-party advertising trackers.</span>
+                <span>SAHAAT is independent and free from third-party advertising trackers.</span>
               </div>
             </li>
           </ul>
@@ -154,7 +154,7 @@ export const AboutPrivacyPage: React.FC<AboutPrivacyPageProps> = ({
         </div>
 
         <p className="text-purple-100 text-base leading-relaxed max-w-3xl">
-          Women deserve travel companions that provide factual, objective environmental context without inducing anxiety or restricting freedom. By focusing on streetlights, business hours, and transit hubs, HerPath supports your independence and peace of mind on every journey.
+          Women deserve travel companions that provide factual, objective environmental context without inducing anxiety or restricting freedom. By focusing on streetlights, business hours, and transit hubs, SAHAAT supports your independence and peace of mind on every journey.
         </p>
 
         <div className="pt-2">
