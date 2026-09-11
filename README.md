@@ -1,32 +1,47 @@
-# React + TypeScript + Vite
+# Saahat — Context-Aware Women Safety Navigation Companion
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Saahat is an intelligent, privacy-first web navigation application built to empower women with real-world environmental safety indicators, continuous street lighting evaluation, transit proximity, and non-surveillance ETA sharing.
 
-Currently, two official plugins are available:
+## ✨ Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- 🗺️ **Real Google Maps & Autocomplete Integration**: All-India geocoding for colleges, landmarks, metro stations, railway stations, airports, hospitals, and local addresses.
+- 🕒 **Dynamic Time-Band Route Scoring**: Real-time evaluation engine with 4 custom scoring bands (**Day**, **Evening**, **Night**, **Late Night**) that automatically re-ranks routes and updates score tags based on selected time of day.
+- ⚖️ **Objective Pros & Cons Comparison**: Comprehensive trade-offs (100% LED lighting, active storefronts, guarded gated complexes, police desks).
+- 🔋 **Global Low Signal & Battery Saver Mode**: High-contrast, low-power UI mode for low battery/connectivity situations.
+- 🚨 **Emergency SOS Console**: Direct access to police dispatch (112) and emergency contacts.
+- 🛡️ **Zero Location Surveillance**: All searches stay local to your browser session.
 
-## React Compiler
+## 🚀 Getting Started
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Prerequisites
 
-## Expanding the Oxlint configuration
+- Node.js (v18 or higher)
+- npm
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+### Installation
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+# Clone the repository
+git clone https://github.com/trishagarg22/Saahat.git
+
+# Navigate into the project folder
+cd Saahat
+
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Build for production
+npm run build
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## 🛠️ Tech Stack
+
+- **Framework**: React 18 + Vite
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS + Lucide Icons
+- **Animations**: Framer Motion
+- **Maps API**: Leaflet / Google Maps JavaScript & Places API
+
