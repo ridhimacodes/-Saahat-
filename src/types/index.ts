@@ -1,4 +1,4 @@
-export type PageType = 'home' | 'search' | 'results' | 'share' | 'community' | 'about' | 'lowsignal';
+export type PageType = 'home' | 'search' | 'results' | 'share' | 'community' | 'about' | 'lowsignal' | 'journey';
 
 export type TimeOfDay = 'day' | 'evening' | 'night' | 'lateNight';
 

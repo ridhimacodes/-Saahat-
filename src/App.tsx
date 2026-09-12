@@ -10,6 +10,7 @@ import { ShareJourneyPage } from './components/ShareJourneyPage';
 import { CommunityNotesPage } from './components/CommunityNotesPage';
 import { AboutPrivacyPage } from './components/AboutPrivacyPage';
 import { LowSignalPage } from './components/LowSignalPage';
+import { ActiveJourneyPage } from './components/ActiveJourneyPage';
 import { SOSModal } from './components/SOSModal';
 import { User, X, Camera, CheckCircle2 } from 'lucide-react';
 import { generateRealRoutes, recalculateRouteScoresForTime } from './services/routing';
@@ -56,7 +57,7 @@ export function App() {
 
   const handleProceedOnly = (route: RouteOption) => {
     setSelectedRouteId(route.id);
-    setActivePage('lowsignal');
+    setActivePage('journey');
   };
 
   const handleAddCommunityNote = (newNote: CommunityNote) => {
@@ -132,7 +133,20 @@ export function App() {
               <ShareJourneyPage
                 selectedRoute={selectedRoute}
                 onNavigateHome={() => setActivePage('home')}
+                onStartJourney={() => setActivePage('journey')}
                 isLowSignalGlobal={isLowSignalGlobal}
+              />
+            )}
+
+            {activePage === 'journey' && (
+              <ActiveJourneyPage
+                selectedRoute={selectedRoute}
+                origin={origin || "Selected Origin"}
+                destination={destination || "Selected Destination"}
+                onEndJourney={() => setActivePage('results')}
+                onNavigateHome={() => setActivePage('home')}
+                isLowSignalGlobal={isLowSignalGlobal}
+                timeOfDay={timeOfDay}
               />
             )}
 

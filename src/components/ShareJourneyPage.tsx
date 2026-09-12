@@ -8,12 +8,14 @@ import { TRUSTED_CONTACTS } from '../data/mockData';
 interface ShareJourneyPageProps {
   selectedRoute: RouteOption;
   onNavigateHome: () => void;
+  onStartJourney?: () => void;
   isLowSignalGlobal?: boolean;
 }
 
 export const ShareJourneyPage: React.FC<ShareJourneyPageProps> = ({
   selectedRoute,
   onNavigateHome,
+  onStartJourney,
   isLowSignalGlobal = false
 }) => {
   const [selectedContact, setSelectedContact] = useState<TrustedContact>(TRUSTED_CONTACTS[0]);
@@ -274,14 +276,23 @@ export const ShareJourneyPage: React.FC<ShareJourneyPageProps> = ({
               </p>
             </div>
 
-            {/* "I've Arrived Safely" Completion Button */}
+            {/* "Start Navigation" or "I've Arrived Safely" Action Buttons */}
             {!hasArrivedSafely ? (
-              <div className="pt-2">
+              <div className="pt-2 space-y-3">
+                {onStartJourney && (
+                  <button
+                    onClick={onStartJourney}
+                    className="w-full py-4 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-base shadow-xl hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2"
+                  >
+                    <Sparkles className="w-5 h-5 text-amber-300" />
+                    <span>Start Active Navigation (Large Map)</span>
+                  </button>
+                )}
                 <button
                   onClick={handleArrivedSafely}
-                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-extrabold text-lg shadow-xl shadow-emerald-500/25 hover:shadow-2xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3 animate-pulse-glow"
+                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold text-sm shadow-md hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2"
                 >
-                  <Heart className="w-6 h-6 text-amber-200 fill-amber-200" />
+                  <Heart className="w-5 h-5 text-amber-200 fill-amber-200" />
                   <span>I've Arrived Safely!</span>
                 </button>
               </div>
