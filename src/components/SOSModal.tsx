@@ -19,6 +19,7 @@ export const SOSModal: React.FC<SOSModalProps> = ({
   const [isLocationSharingActive, setIsLocationSharingActive] = useState(true);
   const [isCallSimulated, setIsCallSimulated] = useState<string | null>(null);
   const [isResolved, setIsResolved] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     if (isOpenDirectly) {
@@ -28,6 +29,7 @@ export const SOSModal: React.FC<SOSModalProps> = ({
   }, [isOpenDirectly]);
 
   const handleOpenSOS = () => {
+    if (isDragging) return;
     setIsOpen(true);
     setIsResolved(false);
     setIsLocationSharingActive(true);
@@ -60,20 +62,34 @@ export const SOSModal: React.FC<SOSModalProps> = ({
 
   return (
     <>
-      {/* Persistent Floating SOS Action Button (Bottom Right) */}
-      <div className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-40">
+      {/* Draggable Floating SOS Action Button (Moveable anywhere on screen) */}
+      <motion.div
+        drag
+        dragMomentum={false}
+        dragElastic={0.05}
+        onDragStart={() => setIsDragging(true)}
+        onDragEnd={() => {
+          setTimeout(() => setIsDragging(false), 150);
+        }}
+        className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-50 touch-none cursor-grab active:cursor-grabbing select-none"
+      >
         <motion.button
           onClick={handleOpenSOS}
-          whileHover={{ scale: 1.1 }}
+          whileHover={{ scale: 1.08 }}
           whileTap={{ scale: 0.95 }}
-          className="relative group flex items-center gap-2.5 px-4 py-3 rounded-full bg-gradient-to-r from-rose-600 via-red-600 to-pink-600 text-white font-extrabold text-sm shadow-2xl shadow-rose-600/50 hover:shadow-rose-600/70 border-2 border-white/80 backdrop-blur-sm transition-all overflow-hidden"
-          title="Emergency SOS Console"
+          className="relative group flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-gradient-to-r from-rose-600 via-red-600 to-pink-600 text-white font-extrabold text-sm shadow-2xl shadow-rose-600/50 hover:shadow-rose-600/70 border-2 border-white/90 backdrop-blur-sm transition-shadow overflow-hidden"
+          title="Hold & Drag to reposition • Click for Emergency SOS"
         >
           <span className="absolute inset-0 rounded-full bg-rose-500 animate-ping opacity-30 pointer-events-none" />
-          <AlertTriangle className="w-5 h-5 text-amber-200 animate-bounce" />
-          <span className="tracking-wide uppercase font-black text-xs">SOS Emergency</span>
+          <AlertTriangle className="w-5 h-5 text-amber-200 animate-bounce flex-shrink-0" />
+          <div className="flex flex-col items-start leading-tight">
+            <span className="tracking-wide uppercase font-black text-xs">SOS Emergency</span>
+            <span className="text-[9px] font-bold text-rose-200 opacity-80 flex items-center gap-1">
+              <span className="text-[10px]">⠿</span> Drag to Move
+            </span>
+          </div>
         </motion.button>
-      </div>
+      </motion.div>
 
       {/* Emergency Console Overlay Modal */}
       <AnimatePresence>
