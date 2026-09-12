@@ -8,6 +8,7 @@ interface RouteSearchPageProps {
   onSearchComplete: (origin: string, destination: string) => void;
   timeOfDay: TimeOfDay;
   setTimeOfDay: (time: TimeOfDay) => void;
+  isLowSignalGlobal?: boolean;
 }
 
 const POPULAR_SUGGESTIONS: GeocodingResult[] = [
@@ -22,7 +23,8 @@ const POPULAR_SUGGESTIONS: GeocodingResult[] = [
 export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
   onSearchComplete,
   timeOfDay,
-  setTimeOfDay
+  setTimeOfDay,
+  isLowSignalGlobal = false
 }) => {
   // Started empty by default as requested
   const [originTitle, setOriginTitle] = useState("");
@@ -117,21 +119,25 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
   };
 
   return (
-    <div className="min-h-[85vh] bg-[#F9F4F0] py-8 sm:py-12 px-4 sm:px-6 lg:px-8 font-sans">
+    <div className={`min-h-[85vh] py-8 sm:py-12 px-4 sm:px-6 lg:px-8 font-sans ${isLowSignalGlobal ? 'bg-slate-950 text-slate-100' : 'bg-[#F9F4F0]'}`}>
       <div className="max-w-3xl mx-auto space-y-6">
         
-        {/* Main Search Card matching Reference Screenshot 1 */}
+        {/* Main Search Card */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-[#FAF5F1] rounded-3xl p-6 sm:p-10 border border-[#E8D8D3] shadow-xl shadow-pink-950/5 relative space-y-6"
+          className={`rounded-3xl p-6 sm:p-10 border shadow-xl relative space-y-6 ${
+            isLowSignalGlobal
+              ? 'bg-slate-900 border-2 border-slate-700 text-slate-100 shadow-2xl'
+              : 'bg-[#FAF5F1] border-[#E8D8D3] shadow-pink-950/5'
+          }`}
         >
           {/* Card Title & Subtitle Header */}
           <div className="space-y-1">
-            <h1 className="font-serif font-bold text-3xl sm:text-4xl text-[#3E1627] tracking-tight">
+            <h1 className={`font-serif font-bold text-3xl sm:text-4xl tracking-tight ${isLowSignalGlobal ? 'text-white' : 'text-[#3E1627]'}`}>
               Plan my journey
             </h1>
-            <p className="text-[#6E4B59] text-xs sm:text-sm font-normal">
+            <p className={`text-xs sm:text-sm font-medium ${isLowSignalGlobal ? 'text-slate-300' : 'text-[#6E4B59]'}`}>
               Search any place in India — a college, metro station, landmark, hospital or address.
             </p>
           </div>

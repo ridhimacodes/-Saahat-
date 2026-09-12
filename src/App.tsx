@@ -108,6 +108,7 @@ export function App() {
                 onSearchComplete={handleSearchComplete}
                 timeOfDay={timeOfDay}
                 setTimeOfDay={setTimeOfDay}
+                isLowSignalGlobal={isLowSignalGlobal}
               />
             )}
 
@@ -131,6 +132,7 @@ export function App() {
               <ShareJourneyPage
                 selectedRoute={selectedRoute}
                 onNavigateHome={() => setActivePage('home')}
+                isLowSignalGlobal={isLowSignalGlobal}
               />
             )}
 
@@ -138,12 +140,14 @@ export function App() {
               <CommunityNotesPage
                 notes={communityNotes}
                 onAddNote={handleAddCommunityNote}
+                isLowSignalGlobal={isLowSignalGlobal}
               />
             )}
 
             {activePage === 'about' && (
               <AboutPrivacyPage
                 onNavigateSearch={() => setActivePage('search')}
+                isLowSignalGlobal={isLowSignalGlobal}
               />
             )}
 

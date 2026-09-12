@@ -4,28 +4,32 @@ import { ShieldCheck, Eye, Lock, Sparkles, HeartHandshake, Database, CheckCircle
 
 interface AboutPrivacyPageProps {
   onNavigateSearch: () => void;
+  isLowSignalGlobal?: boolean;
 }
 
 export const AboutPrivacyPage: React.FC<AboutPrivacyPageProps> = ({
-  onNavigateSearch
+  onNavigateSearch,
+  isLowSignalGlobal = false
 }) => {
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-16 space-y-12">
+    <div className={`max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-16 space-y-12 ${isLowSignalGlobal ? 'text-slate-100' : ''}`}>
       
       {/* Header Banner */}
       <div className="text-center space-y-4">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-100 text-brand-purple text-xs font-extrabold"
+          className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-extrabold ${
+            isLowSignalGlobal ? 'bg-amber-400/20 text-amber-300 border border-amber-400/30' : 'bg-purple-100 text-brand-purple'
+          }`}
         >
-          <ShieldCheck className="w-4 h-4 text-emerald-600" />
+          <ShieldCheck className="w-4 h-4 text-emerald-500" />
           <span>Our Uncompromising Privacy Promise</span>
         </motion.div>
-        <h1 className="text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight">
+        <h1 className={`text-3xl sm:text-5xl font-extrabold tracking-tight ${isLowSignalGlobal ? 'text-white' : 'text-slate-900'}`}>
           Trust & Privacy at the Core
         </h1>
-        <p className="text-slate-600 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
+        <p className={`text-base sm:text-lg max-w-2xl mx-auto leading-relaxed font-medium ${isLowSignalGlobal ? 'text-slate-300' : 'text-slate-600'}`}>
           SAHAAT is built to empower women with real environmental context while respecting absolute data dignity.
         </p>
       </div>

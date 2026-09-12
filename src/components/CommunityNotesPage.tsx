@@ -6,11 +6,13 @@ import { CommunityNote } from '../types';
 interface CommunityNotesPageProps {
   notes: CommunityNote[];
   onAddNote: (newNote: CommunityNote) => void;
+  isLowSignalGlobal?: boolean;
 }
 
 export const CommunityNotesPage: React.FC<CommunityNotesPageProps> = ({
   notes,
-  onAddNote
+  onAddNote,
+  isLowSignalGlobal = false
 }) => {
   const [activeCategory, setActiveCategory] = useState<string>("All");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -76,19 +78,21 @@ export const CommunityNotesPage: React.FC<CommunityNotesPageProps> = ({
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-8">
+    <div className={`max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-8 ${isLowSignalGlobal ? 'text-slate-100' : ''}`}>
       
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-100 text-brand-purple text-xs font-bold mb-2">
+          <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold mb-2 ${
+            isLowSignalGlobal ? 'bg-amber-400/20 text-amber-300 border border-amber-400/30' : 'bg-purple-100 text-brand-purple'
+          }`}>
             <MessageSquare className="w-3.5 h-3.5" />
             <span>Community Environmental Intelligence</span>
           </div>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
+          <h1 className={`text-3xl font-extrabold tracking-tight ${isLowSignalGlobal ? 'text-white' : 'text-slate-900'}`}>
             Community Condition Feed
           </h1>
-          <p className="text-slate-500 text-sm mt-1">
+          <p className={`text-sm mt-1 font-medium ${isLowSignalGlobal ? 'text-slate-300' : 'text-slate-500'}`}>
             Anonymous, crowdsourced updates on street lighting, bus stops, and footfall.
           </p>
         </div>
