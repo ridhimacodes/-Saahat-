@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, MapPin, ChevronDown, ChevronUp, Sun, Sunset, Moon, Bus, Store, Shield, Sparkles, ArrowRight, AlertCircle, Eye, Share2, CheckCircle2, ShieldAlert, ThumbsUp, AlertTriangle, Compass, Download, HardDrive } from 'lucide-react';
+import { Clock, MapPin, ChevronDown, ChevronUp, Sun, Sunset, Moon, Bus, Store, Shield, Sparkles, ArrowRight, AlertCircle, Eye, Share2, CheckCircle2, ShieldAlert, ThumbsUp, AlertTriangle, Compass, Download, HardDrive, Trash2 } from 'lucide-react';
 import { RouteOption, TimeOfDay } from '../types';
 import { InteractiveMap } from './InteractiveMap';
-import { saveJourneyLocally, isRouteDownloaded, estimateStorageSize, getSavedJourneysLocally } from '../utils/offlineStorage';
+import { saveJourneyLocally, isRouteDownloaded, estimateStorageSize, getSavedJourneysLocally, deleteSavedJourneyLocally } from '../utils/offlineStorage';
 
 interface RouteResultsPageProps {
   origin: string;
@@ -48,6 +48,13 @@ export const RouteResultsPage: React.FC<RouteResultsPageProps> = ({
     const sizeEst = estimateStorageSize(targetRoute);
     setDownloadToast(`Route "${targetRoute.name.split('—')[0].trim()}" saved for offline use ✓ (${sizeEst})`);
     setTimeout(() => setDownloadToast(null), 5000);
+  };
+
+  const handleDeleteRoute = (targetRoute: RouteOption) => {
+    deleteSavedJourneyLocally(targetRoute.id);
+    setDownloadedRouteIds(prev => prev.filter(id => id !== targetRoute.id));
+    setDownloadToast(`Route "${targetRoute.name.split('—')[0].trim()}" deleted from offline storage`);
+    setTimeout(() => setDownloadToast(null), 4000);
   };
 
   const toggleExpandScore = (id: string, e: React.MouseEvent) => {
@@ -250,31 +257,42 @@ export const RouteResultsPage: React.FC<RouteResultsPageProps> = ({
                           </span>
                         )}
 
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDownloadRoute(route);
-                          }}
-                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border transition-all flex items-center gap-1 shadow-2xs ${
-                            downloadedRouteIds.includes(route.id)
-                              ? (isLowSignalGlobal ? 'bg-emerald-950 text-emerald-300 border-emerald-500/50' : 'bg-emerald-100 text-emerald-900 border-emerald-300')
-                              : (isLowSignalGlobal ? 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-slate-700' : 'bg-[#F2E6E2] hover:bg-[#E8D8D3] text-[#5E253B] border-[#E0D0C9]')
-                          }`}
-                          title={downloadedRouteIds.includes(route.id) ? "Route Saved Offline ✓" : "Download Route for Offline Use"}
-                        >
-                          {downloadedRouteIds.includes(route.id) ? (
-                            <>
+                        {downloadedRouteIds.includes(route.id) ? (
+                          <div className="flex items-center gap-1">
+                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border flex items-center gap-1 shadow-2xs ${
+                              isLowSignalGlobal ? 'bg-emerald-950 text-emerald-300 border-emerald-500/50' : 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                            }`}>
                               <CheckCircle2 className="w-3 h-3 text-emerald-500" />
                               <span>Offline Ready ({estimateStorageSize(route)})</span>
-                            </>
-                          ) : (
-                            <>
-                              <Download className="w-3 h-3 text-[#A3526B]" />
-                              <span>Download Offline</span>
-                            </>
-                          )}
-                        </button>
+                            </span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteRoute(route);
+                              }}
+                              className="p-1 rounded-full text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-950 transition-colors"
+                              title="Delete Downloaded Map"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDownloadRoute(route);
+                            }}
+                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border transition-all flex items-center gap-1 shadow-2xs ${
+                              isLowSignalGlobal ? 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-slate-700' : 'bg-[#F2E6E2] hover:bg-[#E8D8D3] text-[#5E253B] border-[#E0D0C9]'
+                            }`}
+                            title="Download Route for Offline Use"
+                          >
+                            <Download className="w-3 h-3 text-[#A3526B]" />
+                            <span>Download Offline</span>
+                          </button>
+                        )}
                       </div>
                       <p className={`text-xs font-medium ${isLowSignalGlobal ? 'text-slate-300' : 'text-[#7E5767]'}`}>
                         {route.via}

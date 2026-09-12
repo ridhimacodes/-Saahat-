@@ -140,45 +140,22 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
 
               <button
-                onClick={() => {
-                  setIsLowSignalGlobal(true);
-                  setActivePage('lowsignal');
-                }}
+                onClick={() => setIsLowSignalGlobal(!isLowSignalGlobal)}
                 className={`px-3.5 py-2 rounded-xl text-sm font-semibold transition-all hover:scale-105 flex items-center gap-1.5 ${
-                  activePage === 'lowsignal'
-                    ? (isLowSignalGlobal ? 'bg-amber-400 text-slate-950 font-bold' : 'bg-purple-100 text-brand-purple border border-purple-300')
-                    : (isLowSignalGlobal ? 'text-amber-400 hover:text-amber-300 font-bold' : 'text-slate-700 hover:text-purple-700 font-bold bg-amber-50 hover:bg-amber-100/80 border border-amber-200/80')
+                  isLowSignalGlobal
+                    ? 'bg-amber-400 text-slate-950 font-bold border border-amber-500 shadow-sm'
+                    : 'text-slate-700 hover:text-purple-700 font-bold bg-amber-50 hover:bg-amber-100/80 border border-amber-200/80'
                 }`}
+                title="Toggle Global Low Signal & Offline Battery Saver Mode"
               >
-                <BatteryLow className="w-4 h-4 text-amber-600" />
+                <BatteryLow className={`w-4 h-4 ${isLowSignalGlobal ? 'text-slate-950 animate-pulse' : 'text-amber-600'}`} />
                 <span>Offline Mode</span>
+                <span className={`w-2 h-2 rounded-full ${isLowSignalGlobal ? 'bg-emerald-700 animate-ping' : 'bg-slate-400'}`} />
               </button>
             </nav>
 
-            {/* Right Controls: Low Signal Toggle + Profile Avatar */}
+            {/* Right Controls: Profile Avatar */}
             <div className="flex items-center gap-2.5 sm:gap-3">
-              
-              {/* Permanent Global Low Signal Mode Toggle */}
-              <button
-                onClick={() => {
-                  const nextVal = !isLowSignalGlobal;
-                  setIsLowSignalGlobal(nextVal);
-                  if (nextVal) {
-                    setActivePage('lowsignal');
-                  }
-                }}
-                title="Toggle Global Low Signal & Battery Saver Mode"
-                className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all border shadow-sm ${
-                  isLowSignalGlobal
-                    ? 'bg-amber-400 text-slate-950 border-amber-500 shadow-amber-400/20'
-                    : 'bg-purple-50 text-purple-900 border-purple-200 hover:bg-purple-100'
-                }`}
-              >
-                <BatteryLow className={`w-3.5 h-3.5 ${isLowSignalGlobal ? 'text-slate-950 animate-pulse' : 'text-purple-600'}`} />
-                <span className="hidden sm:inline font-mono">Low Signal</span>
-                <span className={`w-2 h-2 rounded-full ${isLowSignalGlobal ? 'bg-emerald-700 animate-ping' : 'bg-slate-400'}`} />
-              </button>
-
               {/* Profile Avatar Button */}
               <button
                 onClick={onOpenProfileModal}
@@ -228,19 +205,13 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
 
           <button
-            onClick={() => {
-              const nextVal = !isLowSignalGlobal;
-              setIsLowSignalGlobal(nextVal);
-              if (nextVal) {
-                setActivePage('lowsignal');
-              }
-            }}
+            onClick={() => setIsLowSignalGlobal(!isLowSignalGlobal)}
             className={`flex flex-col items-center py-1.5 px-1 rounded-xl transition-all ${
-              activePage === 'lowsignal' || isLowSignalGlobal ? 'text-amber-400 font-bold' : 'text-slate-400'
+              isLowSignalGlobal ? 'text-amber-400 font-bold' : 'text-slate-400'
             }`}
           >
             <BatteryLow className="w-5 h-5 mb-0.5 text-amber-400 animate-pulse" />
-            <span className="text-[10px]">Low Signal</span>
+            <span className="text-[10px]">Offline Mode</span>
           </button>
 
           <button
