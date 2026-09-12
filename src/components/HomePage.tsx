@@ -186,10 +186,6 @@ export const HomePage: React.FC<HomePageProps> = ({
                     <span className="text-purple-200">at</span>
                     <span className="font-extrabold text-amber-300 text-sm">{formattedTime}</span>
                   </div>
-
-                  <span className="px-2.5 py-1 rounded-full bg-purple-900/80 text-purple-200 text-[11px] font-bold border border-purple-700">
-                    Live Night Scoring (9 PM)
-                  </span>
                 </div>
               ) : (
                 /* Custom Time & Day Input Picker */
