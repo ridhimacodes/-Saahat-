@@ -1,9 +1,34 @@
 import { RouteOption, RouteConditionIcon, RouteHighlight } from '../types';
 import { searchLocations } from './geocoding';
 
-// Default Fallback Coordinates
+// Default Fallback Coordinates across Major Indian Cities
 const DEFAULT_LOCATIONS: Record<string, [number, number]> = {
+  // Mumbai
+  "cst": [18.9401, 72.8353],
+  "csmt": [18.9401, 72.8353],
+  "chhatrapati shivaji": [18.9401, 72.8353],
+  "chhatrapati shivaji maharaj terminus": [18.9401, 72.8353],
+  "chhatrapati shivaji maharaj terminus (cst)": [18.9401, 72.8353],
+  "chhatrapati shivaji terminal": [18.9401, 72.8353],
+  "marine drive": [18.9440, 72.8230],
+  "marine drive mumbai": [18.9440, 72.8230],
+  "nariman point": [18.9256, 72.8242],
+  "gateway of india": [18.9220, 72.8347],
+  "colaba": [18.9067, 72.8147],
+  "bandra": [19.0596, 72.8295],
+  "bandra kurla complex": [19.0686, 72.8700],
+  "bkc": [19.0686, 72.8700],
+  "juhu": [19.0988, 72.8264],
+  "andheri": [19.1197, 72.8464],
+  "dadar": [19.0178, 72.8478],
+  "powai": [19.1257, 72.9170],
+  "worli": [19.0134, 72.8164],
+  "mumbai airport": [19.0896, 72.8656],
+  "mumbai": [18.9401, 72.8353],
+
+  // Delhi NCR
   "igdtuw": [28.6653, 77.2324],
+  "kashmere gate": [28.6653, 77.2324],
   "indira gandhi delhi technical university for women": [28.6653, 77.2324],
   "india gate": [28.6129, 77.2295],
   "connaught place": [28.6315, 77.2167],
@@ -23,10 +48,24 @@ const DEFAULT_LOCATIONS: Record<string, [number, number]> = {
   "gurugram": [28.4595, 77.0266],
   "dwarka": [28.5921, 77.0460],
   "saket": [28.5244, 77.2100],
-  "mumbai cst": [18.9401, 72.8353],
+  "hauz khas": [28.5494, 77.2001],
+  "delhi": [28.6129, 77.2295],
+
+  // Bengaluru
   "bengaluru palace": [12.9988, 77.5921],
   "indiranagar": [12.9784, 77.6408],
-  "koramangala": [12.9352, 77.6245]
+  "koramangala": [12.9352, 77.6245],
+  "mg road": [12.9716, 77.5946],
+  "whitefield": [12.9698, 77.7499],
+  "hsr layout": [12.9121, 77.6446],
+  "bengaluru": [12.9716, 77.5946],
+  "bangalore": [12.9716, 77.5946],
+
+  // Hyderabad
+  "charminar": [17.3616, 78.4747],
+  "hitec city": [17.4435, 78.3772],
+  "gachibowli": [17.4401, 78.3489],
+  "hyderabad": [17.3850, 78.4867]
 };
 
 // Calculate Haversine distance in KM
@@ -83,7 +122,7 @@ export interface GeocodedLocation {
   lng: number;
 }
 
-export async function geocodeLocationQuery(query: string, fallbackCoords?: [number, number]): Promise<GeocodedLocation> {
+export async function geocodeLocationQuery(query: string, referenceLoc?: [number, number]): Promise<GeocodedLocation> {
   const cleanQuery = query.trim();
   const lowerQuery = cleanQuery.toLowerCase();
 
@@ -116,25 +155,60 @@ export async function geocodeLocationQuery(query: string, fallbackCoords?: [numb
     console.warn('Geocoding search failed:', err);
   }
 
-  if (fallbackCoords) {
-    return { name: cleanQuery, lat: fallbackCoords[0], lng: fallbackCoords[1] };
+  // If geocoding failed and a reference location (e.g. origin location) is provided,
+  // anchor fallback relative to origin in the SAME city (offset ~2.5km) to prevent cross-country polyline bugs!
+  if (referenceLoc) {
+    return {
+      name: cleanQuery,
+      lat: referenceLoc[0] + 0.022,
+      lng: referenceLoc[1] + 0.018
+    };
   }
-  return { name: cleanQuery, lat: 28.6653, lng: 77.2324 }; // IGDTUW Kashmere Gate default
+
+  // If no reference location is provided, check query for city keywords
+  if (lowerQuery.includes('mumbai') || lowerQuery.includes('cst') || lowerQuery.includes('marine') || lowerQuery.includes('bandra') || lowerQuery.includes('dadar')) {
+    return { name: cleanQuery, lat: 18.9401, lng: 72.8353 }; // Mumbai CST default
+  }
+  if (lowerQuery.includes('bengaluru') || lowerQuery.includes('bangalore') || lowerQuery.includes('indiranagar')) {
+    return { name: cleanQuery, lat: 12.9716, lng: 77.5946 }; // Bengaluru default
+  }
+  if (lowerQuery.includes('hyderabad') || lowerQuery.includes('gachibowli')) {
+    return { name: cleanQuery, lat: 17.3850, lng: 78.4867 }; // Hyderabad default
+  }
+
+  return { name: cleanQuery, lat: 28.6653, lng: 77.2324 }; // Delhi Kashmere Gate default
 }
 
 // Generate 4 distinct route options for any searched origin-destination pair in India
 export async function generateRealRoutes(originQuery: string, destQuery: string): Promise<RouteOption[]> {
-  const originLoc = await geocodeLocationQuery(originQuery, [28.5833, 77.3167]); // Sector 15 fallback
-  const destLoc = await geocodeLocationQuery(destQuery, [28.5562, 77.1000]); // IGI Airport fallback
+  const originLoc = await geocodeLocationQuery(originQuery);
+  // Pass originLoc coordinates as referenceLoc so destination fallback is ALWAYS in the SAME city!
+  const destLoc = await geocodeLocationQuery(destQuery, [originLoc.lat, originLoc.lng]);
 
-  const startCoord: [number, number] = [originLoc.lat, originLoc.lng];
-  const endCoord: [number, number] = [destLoc.lat, destLoc.lng];
+  let startCoord: [number, number] = [originLoc.lat, originLoc.lng];
+  let endCoord: [number, number] = [destLoc.lat, destLoc.lng];
 
-  const airDistance = calculateHaversineDistance(startCoord[0], startCoord[1], endCoord[0], endCoord[1]);
+  let airDistance = calculateHaversineDistance(startCoord[0], startCoord[1], endCoord[0], endCoord[1]);
+
+  // Sanity check: If distance is > 120km and user did not explicitly request a inter-city trip with two distinct city names,
+  // anchor destination to local city bounds to prevent erroneous cross-country polylines.
+  const lowerOrig = originQuery.toLowerCase();
+  const lowerDest = destQuery.toLowerCase();
+  const isExplicitInterCity = (
+    (lowerOrig.includes('mumbai') && lowerDest.includes('delhi')) ||
+    (lowerOrig.includes('delhi') && lowerDest.includes('mumbai')) ||
+    (lowerOrig.includes('bengaluru') && lowerDest.includes('chennai'))
+  );
+
+  if (airDistance > 120 && !isExplicitInterCity) {
+    endCoord = [startCoord[0] + 0.025, startCoord[1] + 0.020];
+    airDistance = calculateHaversineDistance(startCoord[0], startCoord[1], endCoord[0], endCoord[1]);
+  }
+
   // Multiply Haversine distance by 1.35 to account for real urban road network curvature in India
-  const baseDistance = airDistance > 0.5 ? parseFloat((airDistance * 1.35).toFixed(1)) : 15.2;
+  const baseDistance = airDistance > 0.3 ? parseFloat((airDistance * 1.35).toFixed(1)) : 2.5;
   // Calculate duration assuming average city travel speed (~1.8 minutes per road km)
-  const baseMinutes = Math.max(10, Math.round(baseDistance * 1.85));
+  const baseMinutes = Math.max(5, Math.round(baseDistance * 1.85));
 
   // 4 Dynamic Geometries for 4 Route Options
   const route1_Coords = generateCurvedPolyline(startCoord, endCoord, 0.04);
