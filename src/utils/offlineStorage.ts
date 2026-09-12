@@ -9,7 +9,7 @@ export interface SavedJourney {
   helpPoints: { name: string; type: string; phone: string; distance: string }[];
 }
 
-const SAVED_JOURNEY_KEY = 'sahaat_saved_journey';
+const SAVED_JOURNEY_KEY = 'saahat_saved_journey';
 
 export const saveJourneyLocally = (
   origin: string,

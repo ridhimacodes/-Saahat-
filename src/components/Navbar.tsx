@@ -55,7 +55,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <img
                 src="/logo.png"
-                alt="SAHAAT Logo"
+                alt="Saahat Logo"
                 className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl object-cover shadow-md group-hover:scale-110 transition-transform duration-300"
               />
               <div>
@@ -65,7 +65,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       ? 'text-white' 
                       : 'bg-gradient-to-r from-[#6C2BD9] via-purple-700 to-[#FF4D8D] bg-clip-text text-transparent'
                   }`}>
-                    SAHAAT
+                    Saahat
                   </span>
                   {!isLowSignalGlobal && (
                     <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-700 border border-purple-200">

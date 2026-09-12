@@ -147,7 +147,7 @@ export const HomePage: React.FC<HomePageProps> = ({
               transition={{ duration: 0.7, delay: 0.45 }}
               className="text-base sm:text-xl text-purple-100 font-medium leading-relaxed max-w-xl drop-shadow-sm"
             >
-              SAHAAT helps you choose a journey that fits the moment — with clearer options, useful journey signals, and support when you need it.
+              Saahat helps you choose a journey that fits the moment — with clearer options, useful journey signals, and support when you need it.
             </motion.p>
 
             {/* LIVE TIME & DAY OPTION WIDGET */}
@@ -262,7 +262,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                 onClick={onNavigateToAbout}
                 className="px-8 py-4 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-base border border-white/30 backdrop-blur-md hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center gap-2"
               >
-                <span>Explore SAHAAT</span>
+                <span>Explore Saahat</span>
               </button>
             </motion.div>
 
@@ -275,7 +275,7 @@ export const HomePage: React.FC<HomePageProps> = ({
       <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-10">
           <h2 className={`text-2xl sm:text-3xl font-bold ${isLowSignalGlobal ? 'text-white' : 'text-slate-900'}`}>
-            Why Women Choose <span className="text-brand-purple">SAHAAT</span>
+            Why Women Choose <span className="text-brand-purple">Saahat</span>
           </h2>
           <p className={`text-sm sm:text-base mt-2 ${isLowSignalGlobal ? 'text-slate-400 font-mono' : 'text-slate-500'}`}>
             Contextual environmental signals without surveillance or fear tactics.
@@ -466,12 +466,12 @@ export const HomePage: React.FC<HomePageProps> = ({
                 className="group flex items-center justify-center md:justify-start gap-2 hover:opacity-90 transition-opacity text-left focus:outline-none"
               >
                 <Lock className="w-5 h-5 text-teal-300" />
-                <span className="font-bold text-lg text-white group-hover:underline">SAHAAT Privacy Pledge</span>
+                <span className="font-bold text-lg text-white group-hover:underline">Saahat Privacy Pledge</span>
                 <ChevronRight className="w-4 h-4 text-teal-300 group-hover:translate-x-1 transition-transform" />
               </button>
               
               <p className="text-purple-200 text-sm max-w-xl">
-                We never store your search origins, destinations, or real-time location. SAHAAT provides objective environmental data so you navigate with total independence.
+                We never store your search origins, destinations, or real-time location. Saahat provides objective environmental data so you navigate with total independence.
               </p>
 
               {/* Three Trust Indicator Badges */}

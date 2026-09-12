@@ -32,7 +32,7 @@ export const ShareJourneyPage: React.FC<ShareJourneyPageProps> = ({
   const contactName = useCustomContact ? (customName || "Trusted Contact") : selectedContact.name;
   const contactPhone = useCustomContact ? (customPhone || "+91 98765 43210") : selectedContact.phone;
 
-  const generatedMessage = `I'm heading home via ${selectedRoute.name.split('—')[0].trim()} (${selectedRoute.durationMinutes} mins), expected arrival by ${arrivalTime}. Powered by SAHAAT.`;
+  const generatedMessage = `I'm heading home via ${selectedRoute.name.split('—')[0].trim()} (${selectedRoute.durationMinutes} mins), expected arrival by ${arrivalTime}. Powered by Saahat.`;
 
   const handleShareETA = (e: React.FormEvent) => {
     e.preventDefault();
@@ -331,7 +331,7 @@ export const ShareJourneyPage: React.FC<ShareJourneyPageProps> = ({
         }`}>
           <Lock className={`w-4 h-4 flex-shrink-0 ${isLowSignalGlobal ? 'text-amber-400' : 'text-brand-purple'}`} />
           <span>
-            <strong>Privacy Assurance:</strong> This is a one-time message. SAHAAT never continuously tracks or stores your live GPS location.
+            <strong>Privacy Assurance:</strong> This is a one-time message. Saahat never continuously tracks or stores your live GPS location.
           </span>
         </div>
 

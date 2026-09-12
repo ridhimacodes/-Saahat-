@@ -131,7 +131,7 @@ export const RouteResultsPage: React.FC<RouteResultsPageProps> = ({
               isLowSignalGlobal ? 'text-amber-400' : 'text-[#A3526B]'
             }`} />
             <p className="leading-relaxed">
-              <strong>Context Disclaimer:</strong> SAHAAT evaluates factual environmental signals (lighting, footfall, transit, open businesses) to give you total control.
+              <strong>Context Disclaimer:</strong> Saahat evaluates factual environmental signals (lighting, footfall, transit, open businesses) to give you total control.
             </p>
           </div>
         </div>
