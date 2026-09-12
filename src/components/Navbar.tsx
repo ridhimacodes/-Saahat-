@@ -53,13 +53,11 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => setActivePage('home')}
               className="flex items-center gap-3 cursor-pointer group select-none"
             >
-              <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform duration-300 ${
-                isLowSignalGlobal 
-                  ? 'bg-amber-400 text-slate-950 font-black' 
-                  : 'bg-gradient-to-tr from-[#6C2BD9] via-[#8B5CF6] to-[#FF4D8D] shadow-purple-500/25'
-              }`}>
-                <Compass className="w-6 h-6 animate-pulse-slow" />
-              </div>
+              <img
+                src="/logo.png"
+                alt="SAHAAT Logo"
+                className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl object-cover shadow-md group-hover:scale-110 transition-transform duration-300"
+              />
               <div>
                 <div className="flex items-center gap-1.5">
                   <span className={`font-extrabold text-xl sm:text-2xl tracking-tight ${
