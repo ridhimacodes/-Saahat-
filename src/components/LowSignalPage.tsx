@@ -16,7 +16,9 @@ import {
   Trash2,
   Eye,
   Clock,
-  Compass
+  Compass,
+  Volume1,
+  Mic
 } from 'lucide-react';
 import { RouteOption } from '../types';
 import { OFFLINE_HELP_POINTS } from '../data/mockData';
@@ -44,6 +46,19 @@ export const LowSignalPage: React.FC<LowSignalPageProps> = ({
   const [checkInStatus, setCheckInStatus] = useState<'idle' | 'sentOk' | 'sentHelp'>('idle');
   const [savedJourneys, setSavedJourneys] = useState<SavedJourney[]>([]);
   const [activeJourneyId, setActiveJourneyId] = useState<string>(selectedRoute.id);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  const speakText = (text: string) => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 0.95;
+      utterance.onstart = () => setIsSpeaking(true);
+      utterance.onend = () => setIsSpeaking(false);
+      utterance.onerror = () => setIsSpeaking(false);
+      window.speechSynthesis.speak(utterance);
+    }
+  };
 
   useEffect(() => {
     let journeys = getSavedJourneysLocally();
@@ -215,10 +230,23 @@ export const LowSignalPage: React.FC<LowSignalPageProps> = ({
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={() => {
+                  const fullText = `Offline directions for ${currentRoute.name.split('—')[0]}. ${steps.map((st, i) => `Step ${i + 1}: ${st}`).join('. ')}`;
+                  speakText(fullText);
+                }}
+                className="px-3 py-1.5 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 border border-amber-400/40 text-xs font-bold transition-all flex items-center gap-1.5"
+                title="Read directions aloud via Voice Assistant"
+              >
+                <Volume1 className={`w-4 h-4 ${isSpeaking ? 'animate-pulse text-amber-300' : 'text-amber-400'}`} />
+                <span>{isSpeaking ? 'Reading Aloud...' : 'Voice Assistant'}</span>
+              </button>
+
               <span className="text-xs font-mono text-amber-400 bg-amber-950 px-3 py-1 rounded-xl border border-amber-800 font-bold">
                 {currentRoute.durationMinutes} mins • {currentRoute.distanceKm} km
               </span>
+
               {activeJourney && savedJourneys.length > 1 && (
                 <button
                   onClick={() => handleDeleteSavedRoute(activeJourney.id)}
@@ -236,14 +264,28 @@ export const LowSignalPage: React.FC<LowSignalPageProps> = ({
             {steps.map((step, idx) => (
               <div
                 key={idx}
-                className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex items-start gap-3.5 shadow-sm"
+                onClick={() => speakText(`Step ${idx + 1}: ${step}`)}
+                className="p-4 rounded-2xl bg-slate-950 hover:bg-slate-900 border border-slate-800 flex items-start justify-between gap-3.5 shadow-sm cursor-pointer group transition-all"
               >
-                <span className="w-7 h-7 rounded-full bg-amber-400 text-slate-950 font-black text-xs flex items-center justify-center shrink-0 mt-0.5">
-                  {idx + 1}
-                </span>
-                <p className="text-base sm:text-lg font-extrabold text-slate-100 leading-snug">
-                  {step}
-                </p>
+                <div className="flex items-start gap-3.5">
+                  <span className="w-7 h-7 rounded-full bg-amber-400 text-slate-950 font-black text-xs flex items-center justify-center shrink-0 mt-0.5">
+                    {idx + 1}
+                  </span>
+                  <p className="text-base sm:text-lg font-extrabold text-slate-100 leading-snug">
+                    {step}
+                  </p>
+                </div>
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    speakText(`Step ${idx + 1}: ${step}`);
+                  }}
+                  className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 transition-all shrink-0 mt-0.5"
+                  title="Listen to this direction step"
+                >
+                  <Volume1 className="w-4 h-4" />
+                </button>
               </div>
             ))}
           </div>

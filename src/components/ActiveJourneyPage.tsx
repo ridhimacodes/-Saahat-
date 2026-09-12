@@ -9,6 +9,8 @@ import {
   ArrowRight, 
   ChevronUp, 
   ChevronDown, 
+  ChevronLeft,
+  ChevronRight,
   Heart, 
   Sparkles, 
   Share2, 
@@ -23,6 +25,8 @@ import {
   ArrowLeft,
   Volume2,
   VolumeX,
+  Mic,
+  Volume1,
   Layers,
   Plus,
   Minus
@@ -80,6 +84,22 @@ const destDotIcon = L.divIcon({
   iconAnchor: [10, 10]
 });
 
+// Custom Step Pins along the Route Line
+const getStepMarkerIcon = (stepNum: number, isCurrent: boolean) => {
+  return L.divIcon({
+    className: 'step-number-pin',
+    html: `
+      <div class="flex items-center justify-center w-7 h-7 rounded-full font-black text-xs shadow-lg border-2 border-white transition-all ${
+        isCurrent ? 'bg-amber-400 text-slate-950 scale-125 ring-4 ring-amber-400/40' : 'bg-slate-900 text-white opacity-90'
+      }">
+        ${stepNum}
+      </div>
+    `,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14]
+  });
+};
+
 const getNearbyLayerIcon = (type: string) => {
   let emoji = '📍';
   let bgColor = 'bg-[#1E6B45]';
@@ -114,7 +134,7 @@ const MapRecenterController: React.FC<{ coords: [number, number][]; trigger: num
   return null;
 };
 
-// Zoom Controls matching Map 1
+// Zoom Controls
 const ZoomControls: React.FC = () => {
   const map = useMap();
   return (
@@ -154,11 +174,12 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
   const [currentStepIdx, setCurrentStepIdx] = useState(0);
   const [isNavigating, setIsNavigating] = useState(true);
   const [isVoiceMuted, setIsVoiceMuted] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const [showStepsDrawer, setShowStepsDrawer] = useState(false);
   const [hasArrived, setHasArrived] = useState(false);
   const [recenterTrigger, setRecenterTrigger] = useState(0);
 
-  // Active layers state for nearby support places matching Map 1
+  // Active layers state for nearby support places
   const [activeLayers, setActiveLayers] = useState<Record<string, boolean>>({
     hospital: false,
     police: true,
@@ -171,13 +192,48 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
     setActiveLayers(prev => ({ ...prev, [layerKey]: !prev[layerKey] }));
   };
 
-  // Derive offline steps or generate dynamic turn directions
+  // Derive offline steps or generate turn directions
   const steps = selectedRoute.offlineSteps || [
     `Start from ${origin.split(',')[0]} heading along ${selectedRoute.via}`,
     `Pass well-lit commercial strip with open stores and CCTV coverage`,
     `Continue straight for 400m through active pedestrian zone`,
     `Arrive safely at ${destination.split(',')[0]}`
   ];
+
+  // Speech Synthesis Voice Assistant Helper
+  const speakText = (text: string) => {
+    if (isVoiceMuted) return;
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 0.95;
+      utterance.pitch = 1.0;
+      utterance.onstart = () => setIsSpeaking(true);
+      utterance.onend = () => setIsSpeaking(false);
+      utterance.onerror = () => setIsSpeaking(false);
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
+  // Speak direction aloud whenever currentStepIdx changes
+  useEffect(() => {
+    if (!isVoiceMuted && steps[currentStepIdx]) {
+      speakText(`Step ${currentStepIdx + 1}: ${steps[currentStepIdx]}`);
+    }
+  }, [currentStepIdx, isVoiceMuted]);
+
+  // Initial Voice Assistant greeting
+  useEffect(() => {
+    speakText(`Saahat Voice Assistant active. Navigating along ${selectedRoute.name.split('—')[0]}. ${steps[0]}`);
+  }, []);
+
+  const handleReplayVoice = () => {
+    if (hasArrived) {
+      speakText("You have arrived safely at your destination.");
+    } else {
+      speakText(`Step ${currentStepIdx + 1} of ${steps.length}: ${steps[currentStepIdx]}`);
+    }
+  };
 
   // Current position along polyline coordinates
   const currentPosIdx = Math.min(
@@ -186,7 +242,7 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
   );
   const currentPos = coordinates[currentPosIdx] || originCoords;
 
-  // Nearby places derived matching Map 1
+  // Nearby places
   const mockNearbyPlaces = originCoords ? [
     { type: 'police', title: 'Police Assistance Desk', lat: originCoords[0] + 0.003, lng: originCoords[1] + 0.002 },
     { type: 'hospital', title: 'City Central Emergency Hospital', lat: originCoords[0] - 0.004, lng: originCoords[1] + 0.005 },
@@ -195,7 +251,7 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
     { type: 'fuel', title: 'HP Fuel & Express Station', lat: originCoords[0] - 0.002, lng: originCoords[1] - 0.004 },
   ] : [];
 
-  // Auto-advance navigation simulation every 4.5 seconds when active
+  // Auto-advance navigation simulation every 5 seconds when active
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (isNavigating && !hasArrived) {
@@ -206,18 +262,20 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
           } else {
             setHasArrived(true);
             setIsNavigating(false);
+            speakText(`You have arrived safely at ${destination.split(',')[0]}. Journey complete.`);
             confetti({ particleCount: 150, spread: 90, origin: { y: 0.5 } });
             return prev;
           }
         });
-      }, 4500);
+      }, 5000);
     }
     return () => clearInterval(interval);
-  }, [isNavigating, hasArrived, steps.length]);
+  }, [isNavigating, hasArrived, steps.length, destination]);
 
   const handleArrivedSafely = () => {
     setHasArrived(true);
     setIsNavigating(false);
+    speakText(`You have arrived safely at ${destination.split(',')[0]}. Journey complete.`);
     confetti({
       particleCount: 180,
       spread: 100,
@@ -227,6 +285,14 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
 
   const handleRecenter = () => {
     setRecenterTrigger(prev => prev + 1);
+  };
+
+  const handlePrevStep = () => {
+    setCurrentStepIdx(prev => Math.max(0, prev - 1));
+  };
+
+  const handleNextStep = () => {
+    setCurrentStepIdx(prev => Math.min(steps.length - 1, prev + 1));
   };
 
   return (
@@ -265,6 +331,12 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
                     <span className="text-[11px] font-bold opacity-80">
                       {selectedRoute.name.split('—')[0]}
                     </span>
+
+                    {/* Voice Assistant Active Indicator */}
+                    <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/40 text-[10px] font-extrabold">
+                      <Mic className={`w-3 h-3 ${isSpeaking ? 'text-amber-300 animate-pulse' : 'text-amber-400'}`} />
+                      <span>Voice Assistant: {isSpeaking ? 'Speaking...' : 'Active'}</span>
+                    </div>
                   </div>
                   <h3 className="font-extrabold text-sm sm:text-base leading-snug text-white">
                     {steps[currentStepIdx]}
@@ -272,14 +344,54 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
                 </div>
               </div>
 
-              {/* Right: Quick Action Controls */}
-              <div className="flex items-center gap-2 shrink-0 self-end sm:self-center pt-1 sm:pt-0 border-t sm:border-t-0 border-white/10 w-full sm:w-auto justify-end">
+              {/* Right: Quick Controls (Step Navigation + Voice Assistant Replay) */}
+              <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center pt-1 sm:pt-0 border-t sm:border-t-0 border-white/10 w-full sm:w-auto justify-end flex-wrap">
+                {/* Step Previous/Next buttons */}
+                <div className="flex items-center bg-white/10 rounded-full border border-white/20 overflow-hidden">
+                  <button
+                    onClick={handlePrevStep}
+                    disabled={currentStepIdx === 0}
+                    className="p-2 hover:bg-white/20 text-white disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+                    title="Previous Direction Step"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span className="px-1 text-[11px] font-bold text-slate-200 font-mono">
+                    {currentStepIdx + 1}/{steps.length}
+                  </span>
+                  <button
+                    onClick={handleNextStep}
+                    disabled={currentStepIdx === steps.length - 1}
+                    className="p-2 hover:bg-white/20 text-white disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+                    title="Next Direction Step"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Voice Replay button */}
                 <button
-                  onClick={() => setIsVoiceMuted(!isVoiceMuted)}
-                  className={`p-2.5 rounded-full border transition-all ${
+                  onClick={handleReplayVoice}
+                  className="px-3 py-1.5 rounded-full border border-amber-400/40 bg-amber-400/20 hover:bg-amber-400/30 text-amber-200 text-xs font-bold transition-all flex items-center gap-1 shadow-xs"
+                  title="Listen to Voice Direction"
+                >
+                  <Volume1 className={`w-3.5 h-3.5 ${isSpeaking ? 'animate-bounce text-amber-300' : 'text-amber-200'}`} />
+                  <span className="hidden sm:inline">Listen</span>
+                </button>
+
+                {/* Voice Mute Toggle */}
+                <button
+                  onClick={() => {
+                    const nextMute = !isVoiceMuted;
+                    setIsVoiceMuted(nextMute);
+                    if (nextMute && 'speechSynthesis' in window) {
+                      window.speechSynthesis.cancel();
+                    }
+                  }}
+                  className={`p-2 rounded-full border transition-all ${
                     isVoiceMuted 
                       ? 'bg-rose-500/20 text-rose-300 border-rose-500/40' 
-                      : 'bg-white/15 hover:bg-white/25 text-white border-white/20'
+                      : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
                   }`}
                   title={isVoiceMuted ? "Unmute Voice Guidance" : "Mute Voice Guidance"}
                 >
@@ -288,7 +400,7 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
 
                 <button
                   onClick={() => setShowStepsDrawer(!showStepsDrawer)}
-                  className="px-3.5 py-2 rounded-full text-xs font-bold bg-white/15 hover:bg-white/25 text-white border border-white/20 transition-all flex items-center gap-1.5 shadow-xs"
+                  className="px-3 py-1.5 rounded-full text-xs font-bold bg-white/15 hover:bg-white/25 text-white border border-white/20 transition-all flex items-center gap-1 shadow-xs"
                 >
                   <span>{showStepsDrawer ? "Hide List" : "Directions"}</span>
                   {showStepsDrawer ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
@@ -296,7 +408,7 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
 
                 <button
                   onClick={onEndJourney}
-                  className="px-3.5 py-2 rounded-full text-xs font-bold bg-rose-600/90 hover:bg-rose-600 text-white border border-rose-400/40 transition-all flex items-center gap-1 shadow-xs"
+                  className="px-3 py-1.5 rounded-full text-xs font-bold bg-rose-600/90 hover:bg-rose-600 text-white border border-rose-400/40 transition-all flex items-center gap-1 shadow-xs"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" />
                   <span>Exit</span>
@@ -311,7 +423,7 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
               <button
                 onClick={() => toggleLayer('police')}
-                className={`px-3 py-1.5 rounded-full text-[11px] font-bold flex items-center gap-1 backdrop-blur-md transition-all shadow-md flex-shrink-0 ${
+                className={`px-3 py-1.5 rounded-full text-[11px] font-bold flex items-center gap-1 backdrop-blur-md transition-all shadow-md shrink-0 ${
                   activeLayers.police ? 'bg-blue-600 text-white border border-blue-400' : 'bg-white/95 text-slate-800 border border-slate-200'
                 }`}
               >
@@ -320,7 +432,7 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
 
               <button
                 onClick={() => toggleLayer('hospital')}
-                className={`px-3 py-1.5 rounded-full text-[11px] font-bold flex items-center gap-1 backdrop-blur-md transition-all shadow-md flex-shrink-0 ${
+                className={`px-3 py-1.5 rounded-full text-[11px] font-bold flex items-center gap-1 backdrop-blur-md transition-all shadow-md shrink-0 ${
                   activeLayers.hospital ? 'bg-rose-600 text-white border border-rose-400' : 'bg-white/95 text-slate-800 border border-slate-200'
                 }`}
               >
@@ -329,7 +441,7 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
 
               <button
                 onClick={() => toggleLayer('metro')}
-                className={`px-3 py-1.5 rounded-full text-[11px] font-bold flex items-center gap-1 backdrop-blur-md transition-all shadow-md flex-shrink-0 ${
+                className={`px-3 py-1.5 rounded-full text-[11px] font-bold flex items-center gap-1 backdrop-blur-md transition-all shadow-md shrink-0 ${
                   activeLayers.metro ? 'bg-indigo-600 text-white border border-indigo-400' : 'bg-white/95 text-slate-800 border border-slate-200'
                 }`}
               >
@@ -338,7 +450,7 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
 
               <button
                 onClick={() => toggleLayer('pharmacy')}
-                className={`px-3 py-1.5 rounded-full text-[11px] font-bold flex items-center gap-1 backdrop-blur-md transition-all shadow-md flex-shrink-0 ${
+                className={`px-3 py-1.5 rounded-full text-[11px] font-bold flex items-center gap-1 backdrop-blur-md transition-all shadow-md shrink-0 ${
                   activeLayers.pharmacy ? 'bg-emerald-600 text-white border border-emerald-400' : 'bg-white/95 text-slate-800 border border-slate-200'
                 }`}
               >
@@ -347,7 +459,7 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
 
               <button
                 onClick={() => toggleLayer('fuel')}
-                className={`px-3 py-1.5 rounded-full text-[11px] font-bold flex items-center gap-1 backdrop-blur-md transition-all shadow-md flex-shrink-0 ${
+                className={`px-3 py-1.5 rounded-full text-[11px] font-bold flex items-center gap-1 backdrop-blur-md transition-all shadow-md shrink-0 ${
                   activeLayers.fuel ? 'bg-amber-600 text-white border border-amber-400' : 'bg-white/95 text-slate-800 border border-slate-200'
                 }`}
               >
@@ -357,7 +469,7 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
 
             <button
               onClick={handleRecenter}
-              className="px-4 py-1.5 rounded-full bg-white text-[#3E1627] font-bold text-xs shadow-md border border-[#E0D0C9] hover:bg-slate-50 transition-all flex items-center gap-1.5 flex-shrink-0"
+              className="px-4 py-1.5 rounded-full bg-white text-[#3E1627] font-bold text-xs shadow-md border border-[#E0D0C9] hover:bg-slate-50 transition-all flex items-center gap-1.5 shrink-0"
             >
               <Compass className="w-3.5 h-3.5 text-[#A3526B]" />
               <span>Recenter</span>
@@ -374,7 +486,7 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
           style={{ width: '100%', height: '100%' }}
           zoomControl={false}
         >
-          {/* Authentic Google Maps Light Theme Tiles (Identical to Map 1) */}
+          {/* Google Maps Tiles */}
           <TileLayer 
             url="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}" 
             maxZoom={20}
@@ -397,7 +509,46 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
             }}
           />
 
-          {/* Nearby Support Places Markers Matching Map 1 */}
+          {/* Render Step Pins along the Route Polyline */}
+          {steps.map((st, sIdx) => {
+            const stepPosIdx = Math.min(
+              Math.floor((sIdx / Math.max(steps.length - 1, 1)) * (coordinates.length - 1)),
+              coordinates.length - 1
+            );
+            const stepPos = coordinates[stepPosIdx];
+            if (!stepPos) return null;
+            const isCurrent = sIdx === currentStepIdx;
+
+            return (
+              <Marker
+                key={`step-pin-${sIdx}`}
+                position={stepPos}
+                icon={getStepMarkerIcon(sIdx + 1, isCurrent)}
+                eventHandlers={{
+                  click: () => {
+                    setCurrentStepIdx(sIdx);
+                    speakText(`Step ${sIdx + 1}: ${st}`);
+                  }
+                }}
+              >
+                <Popup>
+                  <div className="font-sans text-xs space-y-1 p-1">
+                    <strong className="text-amber-800 block">Step {sIdx + 1} of {steps.length}</strong>
+                    <p className="text-slate-800 font-bold">{st}</p>
+                    <button
+                      onClick={() => speakText(`Step ${sIdx + 1}: ${st}`)}
+                      className="mt-1 px-2.5 py-1 rounded bg-amber-400 text-slate-950 font-bold text-[10px] flex items-center gap-1"
+                    >
+                      <Volume1 className="w-3 h-3" />
+                      <span>Hear Voice Direction</span>
+                    </button>
+                  </div>
+                </Popup>
+              </Marker>
+            );
+          })}
+
+          {/* Nearby Support Places Markers */}
           {mockNearbyPlaces.map((place, idx) => {
             if (!activeLayers[place.type]) return null;
             return (
@@ -475,18 +626,35 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
                   return (
                     <div
                       key={sIdx}
-                      className={`p-3 rounded-2xl text-xs font-medium flex items-start gap-3 transition-all ${
+                      onClick={() => {
+                        setCurrentStepIdx(sIdx);
+                        speakText(`Step ${sIdx + 1}: ${st}`);
+                      }}
+                      className={`p-3 rounded-2xl text-xs font-medium flex items-center justify-between cursor-pointer transition-all ${
                         isCurrent 
-                          ? 'bg-emerald-500/15 border border-emerald-500/40 text-emerald-950 dark:text-emerald-300 font-bold' 
-                          : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                          ? 'bg-emerald-500/15 border border-emerald-500/40 text-emerald-950 dark:text-emerald-300 font-bold shadow-sm' 
+                          : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
                       }`}
                     >
-                      <span className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold ${
-                        isCurrent ? 'bg-emerald-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
-                      }`}>
-                        {sIdx + 1}
-                      </span>
-                      <span>{st}</span>
+                      <div className="flex items-start gap-3">
+                        <span className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold mt-0.5 ${
+                          isCurrent ? 'bg-emerald-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+                        }`}>
+                          {sIdx + 1}
+                        </span>
+                        <span>{st}</span>
+                      </div>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          speakText(`Step ${sIdx + 1}: ${st}`);
+                        }}
+                        className="p-1.5 rounded-lg bg-amber-400/20 text-amber-600 dark:text-amber-300 hover:bg-amber-400/30 transition-all shrink-0 ml-2"
+                        title="Listen to this direction"
+                      >
+                        <Volume1 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   );
                 })}
