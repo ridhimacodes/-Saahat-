@@ -70,6 +70,20 @@ export const HomePage: React.FC<HomePageProps> = ({
     }));
   };
 
+  const getLiveTimeOfDay = (): TimeOfDay => {
+    const hour = now.getHours();
+    if (hour >= 6 && hour < 17) return 'day';
+    if (hour >= 17 && hour < 20) return 'evening';
+    if (hour >= 20 && hour < 23) return 'night';
+    return 'lateNight';
+  };
+
+  useEffect(() => {
+    if (departureMode === 'now') {
+      setTimeOfDay(getLiveTimeOfDay());
+    }
+  }, [now, departureMode]);
+
   return (
     <div className={`space-y-16 sm:space-y-24 pb-20 ${isLowSignalGlobal ? 'bg-slate-950 text-slate-100' : ''}`}>
       
@@ -153,7 +167,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                 <div className="flex items-center gap-2 bg-black/40 p-1 rounded-full border border-white/10">
                   <button
                     type="button"
-                    onClick={() => { setDepartureMode('now'); setTimeOfDay('night'); }}
+                    onClick={() => { setDepartureMode('now'); setTimeOfDay(getLiveTimeOfDay()); }}
                     className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
                       departureMode === 'now'
                         ? 'bg-amber-400 text-slate-950 shadow-md scale-105'

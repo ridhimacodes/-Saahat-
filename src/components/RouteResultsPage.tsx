@@ -39,19 +39,22 @@ export const RouteResultsPage: React.FC<RouteResultsPageProps> = ({
     setExpandedScoreId(expandedScoreId === id ? null : id);
   };
 
-  const timeBandOptions: { id: TimeOfDay; label: string; icon: React.ReactNode }[] = [
-    { id: 'day', label: 'Day (6am-5pm)', icon: <Sun className="w-3.5 h-3.5 text-amber-500" /> },
-    { id: 'evening', label: 'Evening (5pm-8pm)', icon: <Sun className="w-3.5 h-3.5 text-orange-400" /> },
-    { id: 'night', label: 'Night (8pm-11pm)', icon: <Clock className="w-3.5 h-3.5 text-purple-400" /> },
-    { id: 'lateNight', label: 'Late Night (11pm-6am)', icon: <Clock className="w-3.5 h-3.5 text-indigo-400" /> }
-  ];
+  const getTimeLabel = (time: TimeOfDay) => {
+    switch (time) {
+      case 'day': return 'Daytime (6:00 AM – 5:00 PM)';
+      case 'evening': return 'Evening (5:00 PM – 8:00 PM)';
+      case 'night': return 'Night (8:00 PM – 11:00 PM)';
+      case 'lateNight': return 'Late Night (11:00 PM – 6:00 AM)';
+      default: return 'Night (8:00 PM – 11:00 PM)';
+    }
+  };
 
   return (
     <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-8 font-sans ${
       isLowSignalGlobal ? 'text-slate-100' : 'bg-[#F9F4F0]'
     }`}>
       
-      {/* Search Parameters & Live Time Scoring Header Bar */}
+      {/* Search Parameters & Selected Time Status Header Bar */}
       <div className="bg-white rounded-3xl p-5 border border-[#E8D8D3] shadow-sm space-y-4">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -64,8 +67,12 @@ export const RouteResultsPage: React.FC<RouteResultsPageProps> = ({
                 <span className="text-[#A3526B] font-bold">→</span>
                 <span className="font-bold text-[#1E6B45]">{destination.split(',')[0]}</span>
               </div>
-              <p className="text-xs font-medium text-[#7E5767] mt-0.5">
-                Dynamic Time Scoring Active: <span className="font-bold capitalize text-[#3E1627]">{timeOfDay} conditions</span>
+              <p className="text-xs font-medium text-[#7E5767] mt-0.5 flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-[#A3526B]" />
+                <span>Evaluated for Departure Time:</span>
+                <span className="font-bold text-[#3E1627] bg-[#F2E6E2] px-2.5 py-0.5 rounded-full border border-[#E0D0C9]">
+                  {getTimeLabel(timeOfDay)}
+                </span>
               </p>
             </div>
           </div>
@@ -76,32 +83,6 @@ export const RouteResultsPage: React.FC<RouteResultsPageProps> = ({
           >
             Change Parameters
           </button>
-        </div>
-
-        {/* Live Time Band Switcher (Reruns scoring algorithm instantly when clicked) */}
-        <div className="pt-2 border-t border-[#F5ECE8] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-xs font-bold text-[#7E5767]">
-            <Sparkles className="w-4 h-4 text-amber-500 animate-spin-slow" />
-            <span>Test Dynamic Scoring Model by Time Band:</span>
-          </div>
-
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {timeBandOptions.map(opt => (
-              <button
-                key={opt.id}
-                type="button"
-                onClick={() => setTimeOfDay(opt.id)}
-                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 border ${
-                  timeOfDay === opt.id
-                    ? 'bg-[#3E1627] text-amber-300 border-[#3E1627] shadow-md scale-105'
-                    : 'bg-[#F9F4F0] text-[#7E5767] border-[#E0D0C9] hover:bg-white'
-                }`}
-              >
-                {opt.icon}
-                <span>{opt.label}</span>
-              </button>
-            ))}
-          </div>
         </div>
       </div>
 
@@ -141,7 +122,7 @@ export const RouteResultsPage: React.FC<RouteResultsPageProps> = ({
               Evaluated Options ({routes.length})
             </h2>
             <span className="text-xs font-bold text-[#1E6B45] bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-              Ranked for {timeOfDay}
+              Evaluated for {timeOfDay === 'day' ? 'Daytime' : timeOfDay === 'evening' ? 'Evening' : timeOfDay === 'night' ? 'Night' : 'Late Night'}
             </span>
           </div>
 
