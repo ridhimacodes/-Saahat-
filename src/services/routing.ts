@@ -179,6 +179,164 @@ export async function geocodeLocationQuery(query: string, referenceLoc?: [number
   return { name: cleanQuery, lat: 28.6653, lng: 77.2324 }; // Delhi Kashmere Gate default
 }
 
+export function getDynamicRouteNames(originQuery: string, destQuery: string) {
+  const cleanOrig = originQuery.split(',')[0].trim();
+  const cleanDest = destQuery.split(',')[0].trim();
+  const combined = (originQuery + " " + destQuery).toLowerCase();
+
+  // --- MUMBAI SOUTH & CENTRAL ---
+  if (combined.includes("cst") || combined.includes("chhatrapati") || combined.includes("marine") || combined.includes("colaba") || combined.includes("gateway") || combined.includes("nariman") || combined.includes("churchgate")) {
+    return [
+      {
+        name: "BEST MATCH — via D.N. Road & Maharshi Karve Marg",
+        via: "via Dadabhai Naoroji Rd, Churchgate & Marine Drive Promenade"
+      },
+      {
+        name: "FASTEST — via Veer Nariman Road & Subhash Chandra Bose Rd",
+        via: "via Veer Nariman Rd & Marine Drive Bay Link"
+      },
+      {
+        name: "MORE COMFORTABLE — via Karmaveer Bhaurao Patil Marg",
+        via: "via Oval Maidan, High Court Corridor & Churchgate Avenue"
+      },
+      {
+        name: "MORE ACTIVE — via Crawford Market & Kalbadevi Corridor",
+        via: "via Lokmanya Tilak Marg, Kalbadevi & Metro Cinema Junction"
+      }
+    ];
+  }
+
+  // --- MUMBAI SUBURBS & WESTERN CORRIDOR ---
+  if (combined.includes("bandra") || combined.includes("bkc") || combined.includes("juhu") || combined.includes("andheri") || combined.includes("dadar") || combined.includes("worli") || combined.includes("powai")) {
+    return [
+      {
+        name: "BEST MATCH — via Bandra-Worli Sea Link & Hill Road",
+        via: "via Bandra-Worli Sea Link, SV Road & Turner Road"
+      },
+      {
+        name: "FASTEST — via Western Express Highway (WEH)",
+        via: "via WEH Highway & Kalanagar Flyover"
+      },
+      {
+        name: "MORE COMFORTABLE — via Worli Sea Face & Linking Road",
+        via: "via Linking Road Promenade & Carter Road Seaface"
+      },
+      {
+        name: "MORE ACTIVE — via Pali Hill & Bandra Commercial Market",
+        via: "via Pali Naka, Waterfield Road & Bandra Station Market"
+      }
+    ];
+  }
+
+  // --- DELHI NCR SOUTH / AIRPORT / NOIDA / GURGAON ---
+  if (combined.includes("sector 15") || combined.includes("noida") || combined.includes("igi") || combined.includes("airport") || combined.includes("t3") || combined.includes("gurgaon") || combined.includes("gurugram") || combined.includes("dwarka") || combined.includes("saket")) {
+    return [
+      {
+        name: "BEST MATCH — via DND Flyway & Ring Road Corridor",
+        via: "via DND Flyway, Outer Ring Road & Rao Tula Ram Marg"
+      },
+      {
+        name: "FASTEST — via Noida Expressway & Delhi-Gurgaon NH-48",
+        via: "via NH-48 Expressway & Aerocity Boulevard"
+      },
+      {
+        name: "MORE COMFORTABLE — via Barapullah Elevated Corridor",
+        via: "via Barapullah Flyover, Nelson Mandela Marg & Vasant Kunj Ave"
+      },
+      {
+        name: "MORE ACTIVE — via Laxmi Nagar & South Extension Commercial Hub",
+        via: "via Mathura Road, Lajpat Nagar Market & AIIMS Flyover"
+      }
+    ];
+  }
+
+  // --- DELHI NCR CENTRAL / NORTH ---
+  if (combined.includes("igdtuw") || combined.includes("kashmere gate") || combined.includes("india gate") || combined.includes("connaught place") || combined.includes("cp") || combined.includes("rajiv chowk") || combined.includes("delhi")) {
+    return [
+      {
+        name: "BEST MATCH — via Netaji Subhash Marg & Rajpath Promenade",
+        via: "via Netaji Subhash Marg, ITO Junction & Kartavya Path"
+      },
+      {
+        name: "FASTEST — via Ring Road Expressway & Tilak Marg",
+        via: "via Ring Road, Yamuna Marg & Tilak Marg Flyover"
+      },
+      {
+        name: "MORE COMFORTABLE — via Red Fort Boulevard & Janpath",
+        via: "via Red Fort Rd, Janpath & India Gate Hexagon"
+      },
+      {
+        name: "MORE ACTIVE — via Chandni Chowk & Mandi House Market Hub",
+        via: "via Chandni Chowk Main Rd, Daryaganj & Mandi House Circle"
+      }
+    ];
+  }
+
+  // --- BENGALURU ---
+  if (combined.includes("indiranagar") || combined.includes("koramangala") || combined.includes("bengaluru") || combined.includes("bangalore") || combined.includes("mg road") || combined.includes("whitefield") || combined.includes("hsr")) {
+    return [
+      {
+        name: "BEST MATCH — via 100ft Road & Indiranagar Double Road",
+        via: "via 100 Feet Rd, Old Airport Rd & Intermediate Ring Road"
+      },
+      {
+        name: "FASTEST — via Outer Ring Road (ORR) Expressway",
+        via: "via Outer Ring Road & Marathahalli Flyover Link"
+      },
+      {
+        name: "MORE COMFORTABLE — via MG Road & Residency Road Promenade",
+        via: "via MG Road, Brigade Road & Trinity Circle"
+      },
+      {
+        name: "MORE ACTIVE — via Koramangala 80ft Road & Forum Market Hub",
+        via: "via 80 Feet Road Koramangala & Hosur Main Road"
+      }
+    ];
+  }
+
+  // --- HYDERABAD ---
+  if (combined.includes("charminar") || combined.includes("hitec") || combined.includes("gachibowli") || combined.includes("hyderabad")) {
+    return [
+      {
+        name: "BEST MATCH — via PVNR Expressway & Banjara Hills Road No. 1",
+        via: "via PVNR Expressway, Mehdipatnam & Road No. 1 Banjara Hills"
+      },
+      {
+        name: "FASTEST — via Nehru Outer Ring Road (ORR)",
+        via: "via ORR Expressway & Gachibowli Financial District Link"
+      },
+      {
+        name: "MORE COMFORTABLE — via Jubilee Hills Checkpost Corridor",
+        via: "via Road No. 36 Jubilee Hills & Durgam Cheruvu Cable Bridge"
+      },
+      {
+        name: "MORE ACTIVE — via Abids Commercial Market & Tank Bund Road",
+        via: "via MG Road Abids, Secretariate Rd & NTR Marg"
+      }
+    ];
+  }
+
+  // --- DYNAMIC GENERIC FALLBACK FOR ANY OTHER LOCATION ---
+  return [
+    {
+      name: `BEST MATCH — via ${cleanOrig} Main Corridor & Central Ave`,
+      via: `via ${cleanOrig} Main Rd, Station Ave & ${cleanDest} Promenade`
+    },
+    {
+      name: `FASTEST — via ${cleanOrig}-${cleanDest} Express Link Road`,
+      via: `via Direct Arterial Expressway & ${cleanDest} Link`
+    },
+    {
+      name: `MORE COMFORTABLE — via ${cleanOrig} Residential Parkway`,
+      via: `via Guarded Residential Boulevard & Tree-Lined Parkway`
+    },
+    {
+      name: `MORE ACTIVE — via ${cleanOrig} Commercial Market Corridor`,
+      via: `via Shopping Market Square, Retail Arcade & Town Plaza`
+    }
+  ];
+}
+
 // Generate 4 distinct route options for any searched origin-destination pair in India
 export async function generateRealRoutes(originQuery: string, destQuery: string): Promise<RouteOption[]> {
   const originLoc = await geocodeLocationQuery(originQuery);
@@ -216,11 +374,14 @@ export async function generateRealRoutes(originQuery: string, destQuery: string)
   const route3_Coords = generateCurvedPolyline(startCoord, endCoord, 0.08);
   const route4_Coords = generateCurvedPolyline(startCoord, endCoord, -0.10);
 
+  // Get real, location-specific route names and via descriptions
+  const routeNames = getDynamicRouteNames(originQuery, destQuery);
+
   return [
     {
       id: "route-best",
-      name: "BEST MATCH — Commercial Main Corridor",
-      via: `via Main Highway & ${originQuery.split(',')[0]}`,
+      name: routeNames[0].name,
+      via: routeNames[0].via,
       durationMinutes: baseMinutes,
       distanceKm: baseDistance,
       comfortScore: 9.4,
@@ -268,8 +429,8 @@ export async function generateRealRoutes(originQuery: string, destQuery: string)
     },
     {
       id: "route-fastest",
-      name: "FASTEST — Direct Transit Expressway",
-      via: "via Express Link Road",
+      name: routeNames[1].name,
+      via: routeNames[1].via,
       durationMinutes: Math.max(8, Math.round(baseMinutes * 0.85)),
       distanceKm: parseFloat((baseDistance * 0.92).toFixed(1)),
       comfortScore: 8.8,
@@ -310,8 +471,8 @@ export async function generateRealRoutes(originQuery: string, destQuery: string)
     },
     {
       id: "route-comfortable",
-      name: "MORE COMFORTABLE — Residential Boulevard",
-      via: "via Tree-Lined Residential Avenue",
+      name: routeNames[2].name,
+      via: routeNames[2].via,
       durationMinutes: Math.round(baseMinutes * 1.1),
       distanceKm: parseFloat((baseDistance * 1.08).toFixed(1)),
       comfortScore: 9.0,
@@ -352,8 +513,8 @@ export async function generateRealRoutes(originQuery: string, destQuery: string)
     },
     {
       id: "route-active",
-      name: "MORE ACTIVE — Market & Commercial Hub",
-      via: "via Market Square & Shopping Hub",
+      name: routeNames[3].name,
+      via: routeNames[3].via,
       durationMinutes: Math.round(baseMinutes * 1.07),
       distanceKm: parseFloat((baseDistance * 1.04).toFixed(1)),
       comfortScore: 8.5,
