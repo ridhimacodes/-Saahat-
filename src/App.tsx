@@ -134,6 +134,10 @@ export function App() {
                 timeOfDay={timeOfDay}
                 setTimeOfDay={setTimeOfDay}
                 isLowSignalGlobal={isLowSignalGlobal}
+                onNavigateToLowSignal={() => {
+                  setIsLowSignalGlobal(true);
+                  setActivePage('lowsignal');
+                }}
               />
             )}
 

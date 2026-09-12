@@ -17,6 +17,7 @@ interface RouteResultsPageProps {
   timeOfDay: TimeOfDay;
   setTimeOfDay: (time: TimeOfDay) => void;
   isLowSignalGlobal: boolean;
+  onNavigateToLowSignal?: () => void;
 }
 
 export const RouteResultsPage: React.FC<RouteResultsPageProps> = ({
@@ -30,7 +31,8 @@ export const RouteResultsPage: React.FC<RouteResultsPageProps> = ({
   onBackToSearch,
   timeOfDay,
   setTimeOfDay,
-  isLowSignalGlobal
+  isLowSignalGlobal,
+  onNavigateToLowSignal
 }) => {
   const [expandedScoreId, setExpandedScoreId] = useState<string | null>(selectedRouteId);
   const selectedRoute = routes.find(r => r.id === selectedRouteId) || routes[0];
@@ -45,7 +47,7 @@ export const RouteResultsPage: React.FC<RouteResultsPageProps> = ({
     setDownloadedRouteIds(prev => Array.from(new Set([...prev, targetRoute.id])));
     const sizeEst = estimateStorageSize(targetRoute);
     setDownloadToast(`Route "${targetRoute.name.split('—')[0].trim()}" saved for offline use ✓ (${sizeEst})`);
-    setTimeout(() => setDownloadToast(null), 4000);
+    setTimeout(() => setDownloadToast(null), 5000);
   };
 
   const toggleExpandScore = (id: string, e: React.MouseEvent) => {
@@ -74,10 +76,18 @@ export const RouteResultsPage: React.FC<RouteResultsPageProps> = ({
             initial={{ opacity: 0, y: -20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            className="fixed top-6 right-6 z-50 bg-slate-900 text-amber-300 px-5 py-3 rounded-2xl shadow-2xl border border-amber-400/50 flex items-center gap-3 text-xs font-bold"
+            className="fixed top-6 right-6 z-50 bg-slate-900 text-amber-300 px-5 py-3.5 rounded-2xl shadow-2xl border border-amber-400/50 flex items-center gap-3 text-xs font-bold"
           >
             <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
             <span>{downloadToast}</span>
+            {onNavigateToLowSignal && (
+              <button
+                onClick={onNavigateToLowSignal}
+                className="ml-2 px-3 py-1 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs transition-all shadow-sm shrink-0"
+              >
+                View Offline Route →
+              </button>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -112,16 +122,27 @@ export const RouteResultsPage: React.FC<RouteResultsPageProps> = ({
             </div>
           </div>
 
-          <button
-            onClick={onBackToSearch}
-            className={`px-5 py-2 rounded-full text-xs font-bold border transition-all shadow-xs shrink-0 ${
-              isLowSignalGlobal
-                ? 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-slate-600'
-                : 'bg-[#F2E6E2] hover:bg-[#E8D8D3] text-[#5E253B] border-[#E0D0C9]'
-            }`}
-          >
-            Change Parameters
-          </button>
+          <div className="flex items-center gap-2 flex-wrap shrink-0">
+            {downloadedRouteIds.length > 0 && onNavigateToLowSignal && (
+              <button
+                onClick={onNavigateToLowSignal}
+                className="px-4 py-2 rounded-full text-xs font-extrabold bg-amber-400 hover:bg-amber-300 text-slate-950 border border-amber-500 shadow-sm transition-all flex items-center gap-1.5"
+              >
+                <HardDrive className="w-3.5 h-3.5 text-slate-950" />
+                <span>View Downloaded Routes ({downloadedRouteIds.length})</span>
+              </button>
+            )}
+            <button
+              onClick={onBackToSearch}
+              className={`px-5 py-2 rounded-full text-xs font-bold border transition-all shadow-xs ${
+                isLowSignalGlobal
+                  ? 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-slate-600'
+                  : 'bg-[#F2E6E2] hover:bg-[#E8D8D3] text-[#5E253B] border-[#E0D0C9]'
+              }`}
+            >
+              Change Parameters
+            </button>
+          </div>
         </div>
       </div>
 
