@@ -13,11 +13,19 @@ import { LowSignalPage } from './components/LowSignalPage';
 import { ActiveJourneyPage } from './components/ActiveJourneyPage';
 import { SOSModal } from './components/SOSModal';
 import { User, X, Camera, CheckCircle2 } from 'lucide-react';
-import { generateRealRoutes, recalculateRouteScoresForTime } from './services/routing';
+import { generateRealRoutes, recalculateRouteScoresForTime, getLiveTimeOfDay } from './services/routing';
 
 export function App() {
   const [activePage, setActivePage] = useState<PageType>('home');
-  const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>('night');
+  const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>(getLiveTimeOfDay());
+
+  // Periodically update live time of day to match system clock automatically
+  useEffect(() => {
+    const updateTime = () => setTimeOfDay(getLiveTimeOfDay());
+    updateTime();
+    const interval = setInterval(updateTime, 30000);
+    return () => clearInterval(interval);
+  }, []);
   const [userProfile, setUserProfile] = useState<UserProfile>(INITIAL_USER_PROFILE);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isLowSignalGlobal, setIsLowSignalGlobal] = useState(false);

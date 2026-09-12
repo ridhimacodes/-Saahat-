@@ -617,6 +617,15 @@ export async function generateRealRoutes(
   ];
 }
 
+// Determines the live time band based on system clock
+export function getLiveTimeOfDay(): 'day' | 'evening' | 'night' | 'lateNight' {
+  const hour = new Date().getHours();
+  if (hour >= 6 && hour < 17) return 'day';
+  if (hour >= 17 && hour < 21) return 'evening';
+  if (hour >= 21 && hour < 23) return 'night';
+  return 'lateNight';
+}
+
 // Recalculates route scores, highlight tags, pros/cons, and BEST MATCH rankings based on time band (Day, Evening, Night, Late Night)
 export function recalculateRouteScoresForTime(routes: RouteOption[], timeOfDay: 'day' | 'evening' | 'night' | 'lateNight'): RouteOption[] {
   const updatedRoutes = routes.map(route => {

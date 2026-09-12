@@ -71,43 +71,16 @@ export const RouteResultsPage: React.FC<RouteResultsPageProps> = ({
                 <span className={`font-bold ${isLowSignalGlobal ? 'text-amber-400' : 'text-[#A3526B]'}`}>→</span>
                 <span className={`font-bold ${isLowSignalGlobal ? 'text-emerald-400' : 'text-[#1E6B45]'}`}>{destination.split(',')[0]}</span>
               </div>
-              <div className="mt-1 space-y-1">
-                <div className={`text-xs font-bold flex items-center gap-1.5 ${isLowSignalGlobal ? 'text-amber-300' : 'text-[#7E5767]'}`}>
-                  <Clock className={`w-3.5 h-3.5 ${isLowSignalGlobal ? 'text-amber-400' : 'text-[#A3526B]'}`} />
-                  <span>Departure Time Band (Click to Recalculate Live):</span>
-                </div>
-                <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-                  {[
-                    { id: 'day' as TimeOfDay, label: 'Daytime (3 PM)', icon: Sun, color: 'text-amber-500' },
-                    { id: 'evening' as TimeOfDay, label: 'Evening (7 PM)', icon: Sunset, color: 'text-orange-500' },
-                    { id: 'night' as TimeOfDay, label: 'Night (9 PM)', icon: Moon, color: 'text-indigo-400' },
-                    { id: 'lateNight' as TimeOfDay, label: 'Late Night (1 AM)', icon: Sparkles, color: 'text-purple-400' },
-                  ].map((item) => {
-                    const isSelected = timeOfDay === item.id;
-                    const IconComponent = item.icon;
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => setTimeOfDay(item.id)}
-                        className={`px-3 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 border shadow-2xs ${
-                          isSelected
-                            ? (isLowSignalGlobal
-                                ? 'bg-amber-400 text-slate-950 border-amber-300 font-extrabold ring-2 ring-amber-400/40'
-                                : 'bg-[#5E253B] text-white border-[#5E253B] font-extrabold ring-2 ring-[#5E253B]/20 shadow-md')
-                            : (isLowSignalGlobal
-                                ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
-                                : 'bg-[#F2E6E2] hover:bg-[#E8D8D3] text-[#5E253B] border-[#E0D0C9]')
-                        }`}
-                      >
-                        <IconComponent className={`w-3 h-3 ${isSelected ? 'text-amber-300' : item.color}`} />
-                        <span>{item.label}</span>
-                        {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 ml-0.5 animate-pulse" />}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+              <p className={`text-xs font-semibold mt-1 flex items-center gap-1.5 flex-wrap ${isLowSignalGlobal ? 'text-slate-300' : 'text-[#7E5767]'}`}>
+                <Clock className={`w-3.5 h-3.5 ${isLowSignalGlobal ? 'text-amber-400' : 'text-[#A3526B]'}`} />
+                <span>Evaluated for Live System Time:</span>
+                <span className={`font-bold px-3 py-1 rounded-full border text-xs flex items-center gap-1.5 shadow-2xs ${
+                  isLowSignalGlobal ? 'bg-amber-400/20 text-amber-300 border-amber-400/40' : 'bg-[#F2E6E2] text-[#3E1627] border-[#E0D0C9]'
+                }`}>
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                  <span>{getTimeLabel(timeOfDay)}</span>
+                </span>
+              </p>
             </div>
           </div>
 

@@ -446,63 +446,6 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
               )}
             </div>
 
-            {/* DEPARTURE TIME / TIME-BASED SCORING SELECTOR */}
-            <div className="relative z-10 space-y-2 pt-1">
-              <label className="block text-xs font-bold tracking-widest text-[#7E5767] uppercase ml-1 flex items-center justify-between">
-                <span className="flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-[#A3526B]" />
-                  <span>DEPARTURE TIME & TIME-BASED SCORING</span>
-                </span>
-                <span className="text-[10px] normal-case font-semibold text-[#A3526B]">
-                  Scores & Best Match update by time
-                </span>
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                {[
-                  { id: 'day' as TimeOfDay, label: 'Daytime', timeStr: '3:00 PM', rangeStr: '6 AM – 5 PM', icon: Sun, color: 'text-amber-500' },
-                  { id: 'evening' as TimeOfDay, label: 'Evening', timeStr: '7:00 PM', rangeStr: '5 PM – 9 PM', icon: Sunset, color: 'text-orange-500' },
-                  { id: 'night' as TimeOfDay, label: 'Night', timeStr: '9:00 PM', rangeStr: '9 PM – 11 PM', icon: Moon, color: 'text-indigo-500' },
-                  { id: 'lateNight' as TimeOfDay, label: 'Late Night', timeStr: '1:00 AM', rangeStr: '11 PM – 6 AM', icon: Sparkles, color: 'text-purple-500' },
-                ].map((item) => {
-                  const isSelected = timeOfDay === item.id;
-                  const IconComponent = item.icon;
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => setTimeOfDay(item.id)}
-                      className={`p-3 rounded-2xl border text-left transition-all flex flex-col justify-between ${
-                        isSelected
-                          ? (isLowSignalGlobal
-                              ? 'bg-amber-500/20 border-amber-400 text-white ring-2 ring-amber-400/40 shadow-md'
-                              : 'bg-[#5E253B] border-[#5E253B] text-white ring-2 ring-[#5E253B]/20 shadow-md')
-                          : (isLowSignalGlobal
-                              ? 'bg-slate-800/80 border-slate-700 text-slate-300 hover:bg-slate-800'
-                              : 'bg-white border-[#E0D0C9] text-[#3E1627] hover:border-[#A3526B] shadow-2xs')
-                      }`}
-                    >
-                      <div className="flex items-center justify-between gap-1 w-full mb-1">
-                        <span className="font-bold text-xs flex items-center gap-1.5">
-                          <IconComponent className={`w-3.5 h-3.5 ${isSelected ? 'text-amber-300' : item.color}`} />
-                          {item.label}
-                        </span>
-                        {isSelected && (
-                          <span className={`w-2 h-2 rounded-full ${isLowSignalGlobal ? 'bg-amber-400' : 'bg-emerald-400'}`} />
-                        )}
-                      </div>
-                      <div className="space-y-0.5">
-                        <span className={`block font-extrabold text-xs ${isSelected ? 'text-amber-200' : 'text-[#A3526B]'}`}>
-                          {item.timeStr}
-                        </span>
-                        <span className={`block text-[10px] font-medium ${isSelected ? 'opacity-80' : 'text-[#7E5767]'}`}>
-                          {item.rangeStr}
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
 
             {/* Action Buttons Row Matching Reference Screenshot 1 */}
             <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
