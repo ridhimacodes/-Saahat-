@@ -88,9 +88,9 @@ export const HomePage: React.FC<HomePageProps> = ({
     <div className={`space-y-16 sm:space-y-24 pb-20 ${isLowSignalGlobal ? 'bg-slate-950 text-slate-100' : ''}`}>
       
       {/* Full-Width Redesigned Hero Section with Uploaded Image */}
-      <section className="relative min-h-[560px] sm:min-h-[620px] lg:min-h-[660px] flex items-center overflow-hidden bg-[#230B15]">
+      <section className="relative min-h-[580px] sm:min-h-[640px] lg:min-h-[680px] flex items-center overflow-hidden bg-[#230B15]">
         
-        {/* Real Image Background (Framed from waist/shoulders up with surrounding street scene visible) */}
+        {/* Real Image Background (Woman walking confidently framed clearly on the right) */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -100,12 +100,12 @@ export const HomePage: React.FC<HomePageProps> = ({
           <img
             src="/hero.jpg"
             alt="Young Indian woman walking confidently in illuminated city street at dusk"
-            className="w-full h-full object-cover object-[center_20%] sm:object-[75%_25%] lg:object-[72%_20%] filter brightness-95 contrast-[1.02]"
+            className="w-full h-full object-cover object-[68%_15%] sm:object-[65%_center] lg:object-[62%_center] filter brightness-100"
           />
 
-          {/* Dark Maroon/Charcoal Gradient Overlay (Strong on Left for Text Contrast, Fades to Expose Street Scene on Right) */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#230B15] via-[#230B15]/85 to-transparent w-full sm:w-[65%] lg:w-[58%]" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#230B15] via-transparent to-black/25" />
+          {/* Dark Maroon/Charcoal Gradient Overlay (Covers Left Side for Text Readability, Fades Out Completely to Expose Her Picture on Right) */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#230B15] via-[#230B15]/80 via-40% to-transparent w-[92%] sm:w-[55%] lg:w-[48%] pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#230B15]/90 via-transparent to-black/20 pointer-events-none" />
         </motion.div>
 
         {/* Hero Foreground Content */}
