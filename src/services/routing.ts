@@ -9,6 +9,20 @@ const DEFAULT_LOCATIONS: Record<string, [number, number]> = {
   "connaught place": [28.6315, 77.2167],
   "rajiv chowk": [28.6328, 77.2195],
   "delhi airport": [28.5562, 77.1000],
+  "indira gandhi international airport": [28.5562, 77.1000],
+  "igi airport": [28.5562, 77.1000],
+  "airport": [28.5562, 77.1000],
+  "t3": [28.5562, 77.1000],
+  "terminal 3": [28.5562, 77.1000],
+  "sector 15": [28.5833, 77.3167],
+  "sector 15 noida": [28.5833, 77.3167],
+  "sector 15 gurgaon": [28.4682, 77.0378],
+  "sector 15 gurugram": [28.4682, 77.0378],
+  "noida": [28.5708, 77.3260],
+  "gurgaon": [28.4595, 77.0266],
+  "gurugram": [28.4595, 77.0266],
+  "dwarka": [28.5921, 77.0460],
+  "saket": [28.5244, 77.2100],
   "mumbai cst": [18.9401, 72.8353],
   "bengaluru palace": [12.9988, 77.5921],
   "indiranagar": [12.9784, 77.6408],
@@ -73,8 +87,9 @@ export async function geocodeLocationQuery(query: string, fallbackCoords?: [numb
   const cleanQuery = query.trim();
   const lowerQuery = cleanQuery.toLowerCase();
 
+  // Try exact or partial matches in DEFAULT_LOCATIONS first
   for (const [key, coords] of Object.entries(DEFAULT_LOCATIONS)) {
-    if (lowerQuery.includes(key)) {
+    if (lowerQuery.includes(key) || key.includes(lowerQuery)) {
       return { name: cleanQuery, lat: coords[0], lng: coords[1] };
     }
   }
@@ -109,14 +124,17 @@ export async function geocodeLocationQuery(query: string, fallbackCoords?: [numb
 
 // Generate 4 distinct route options for any searched origin-destination pair in India
 export async function generateRealRoutes(originQuery: string, destQuery: string): Promise<RouteOption[]> {
-  const originLoc = await geocodeLocationQuery(originQuery, [28.6653, 77.2324]);
-  const destLoc = await geocodeLocationQuery(destQuery, [28.6129, 77.2295]);
+  const originLoc = await geocodeLocationQuery(originQuery, [28.5833, 77.3167]); // Sector 15 fallback
+  const destLoc = await geocodeLocationQuery(destQuery, [28.5562, 77.1000]); // IGI Airport fallback
 
   const startCoord: [number, number] = [originLoc.lat, originLoc.lng];
   const endCoord: [number, number] = [destLoc.lat, destLoc.lng];
 
-  const baseDistance = calculateHaversineDistance(startCoord[0], startCoord[1], endCoord[0], endCoord[1]) || 9.4;
-  const baseMinutes = Math.max(12, Math.round(baseDistance * 3));
+  const airDistance = calculateHaversineDistance(startCoord[0], startCoord[1], endCoord[0], endCoord[1]);
+  // Multiply Haversine distance by 1.35 to account for real urban road network curvature in India
+  const baseDistance = airDistance > 0.5 ? parseFloat((airDistance * 1.35).toFixed(1)) : 15.2;
+  // Calculate duration assuming average city travel speed (~1.8 minutes per road km)
+  const baseMinutes = Math.max(10, Math.round(baseDistance * 1.85));
 
   // 4 Dynamic Geometries for 4 Route Options
   const route1_Coords = generateCurvedPolyline(startCoord, endCoord, 0.04);

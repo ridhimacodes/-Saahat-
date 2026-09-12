@@ -57,6 +57,110 @@ const FAMOUS_INDIAN_PLACES: Record<string, GeocodingResult> = {
     lat: 28.5562,
     lng: 77.1000
   },
+  "indira gandhi international airport (del) t3": {
+    placeId: "del-t3",
+    displayName: "Terminal 3, Indira Gandhi International Airport (DEL), New Delhi",
+    title: "IGI Airport Terminal 3 (T3)",
+    address: "Terminal 3, IGI Airport, New Delhi, Delhi 110037, India",
+    lat: 28.5562,
+    lng: 77.1000
+  },
+  "indira gandhi international airport t3": {
+    placeId: "del-t3",
+    displayName: "Terminal 3, Indira Gandhi International Airport (DEL), New Delhi",
+    title: "IGI Airport Terminal 3 (T3)",
+    address: "Terminal 3, IGI Airport, New Delhi, Delhi 110037, India",
+    lat: 28.5562,
+    lng: 77.1000
+  },
+  "igi airport t3": {
+    placeId: "del-t3",
+    displayName: "Terminal 3, Indira Gandhi International Airport (DEL), New Delhi",
+    title: "IGI Airport Terminal 3 (T3)",
+    address: "Terminal 3, IGI Airport, New Delhi, Delhi 110037, India",
+    lat: 28.5562,
+    lng: 77.1000
+  },
+  "t3 airport": {
+    placeId: "del-t3",
+    displayName: "Terminal 3, Indira Gandhi International Airport (DEL), New Delhi",
+    title: "IGI Airport Terminal 3 (T3)",
+    address: "Terminal 3, IGI Airport, New Delhi, Delhi 110037, India",
+    lat: 28.5562,
+    lng: 77.1000
+  },
+  "sector 15": {
+    placeId: "sec-15-noida",
+    displayName: "Sector 15, Noida, Uttar Pradesh",
+    title: "Sector 15, Noida",
+    address: "Sector 15, Noida, Uttar Pradesh 201301, India",
+    lat: 28.5833,
+    lng: 77.3167
+  },
+  "sector 15 noida": {
+    placeId: "sec-15-noida",
+    displayName: "Sector 15, Noida, Uttar Pradesh",
+    title: "Sector 15, Noida",
+    address: "Sector 15, Noida, Uttar Pradesh 201301, India",
+    lat: 28.5833,
+    lng: 77.3167
+  },
+  "sector 15 gurgaon": {
+    placeId: "sec-15-ggn",
+    displayName: "Sector 15, Gurugram, Haryana",
+    title: "Sector 15, Gurugram",
+    address: "Sector 15 Part 1, Gurugram, Haryana 122001, India",
+    lat: 28.4682,
+    lng: 77.0378
+  },
+  "sector 15 gurugram": {
+    placeId: "sec-15-ggn",
+    displayName: "Sector 15, Gurugram, Haryana",
+    title: "Sector 15, Gurugram",
+    address: "Sector 15 Part 1, Gurugram, Haryana 122001, India",
+    lat: 28.4682,
+    lng: 77.0378
+  },
+  "noida": {
+    placeId: "noida-1",
+    displayName: "Noida, Uttar Pradesh",
+    title: "Noida",
+    address: "Gautam Buddha Nagar, Noida, Uttar Pradesh, India",
+    lat: 28.5708,
+    lng: 77.3260
+  },
+  "gurgaon": {
+    placeId: "ggn-1",
+    displayName: "Gurugram, Haryana",
+    title: "Gurugram",
+    address: "Gurugram, Haryana, India",
+    lat: 28.4595,
+    lng: 77.0266
+  },
+  "gurugram": {
+    placeId: "ggn-1",
+    displayName: "Gurugram, Haryana",
+    title: "Gurugram",
+    address: "Gurugram, Haryana, India",
+    lat: 28.4595,
+    lng: 77.0266
+  },
+  "dwarka": {
+    placeId: "dwarka-1",
+    displayName: "Dwarka, New Delhi",
+    title: "Dwarka",
+    address: "Dwarka Sub-city, South West Delhi, New Delhi, Delhi 110075, India",
+    lat: 28.5921,
+    lng: 77.0460
+  },
+  "saket": {
+    placeId: "saket-1",
+    displayName: "Saket, South Delhi, New Delhi",
+    title: "Saket",
+    address: "Saket, Press Enclave Road, South Delhi, New Delhi, Delhi 110017, India",
+    lat: 28.5244,
+    lng: 77.2100
+  },
   "mumbai cst": {
     placeId: "cst-1",
     displayName: "Chhatrapati Shivaji Maharaj Terminus (CST), Mumbai",
