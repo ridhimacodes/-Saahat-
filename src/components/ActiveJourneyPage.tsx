@@ -234,133 +234,135 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
       isLowSignalGlobal ? 'bg-slate-950 text-slate-100' : 'bg-slate-900 text-slate-900'
     }`}>
 
-      {/* TOP FLOATING BAR: Nearby Support Layers Toggles Matching Map 1 */}
-      <div className="absolute top-3 left-3 right-28 z-[450] flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+      {/* FULL MAP CANVAS CONTAINER WITH ALL OVERLAYS INSIDE */}
+      <div className="relative w-full h-full flex-1 z-10 overflow-hidden">
+
+        {/* 1. TOP FLOATING BAR: Nearby Support Layers Toggles INSIDE MAP */}
+        <div className="absolute top-3 left-3 right-28 z-[400] flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+          <button
+            onClick={() => toggleLayer('police')}
+            className={`px-3 py-1.5 rounded-full text-[11px] font-bold flex items-center gap-1 backdrop-blur-md transition-all shadow-md flex-shrink-0 ${
+              activeLayers.police ? 'bg-blue-600 text-white border border-blue-400' : 'bg-white/95 text-slate-800 border border-slate-200'
+            }`}
+          >
+            <span>👮 Police</span>
+          </button>
+
+          <button
+            onClick={() => toggleLayer('hospital')}
+            className={`px-3 py-1.5 rounded-full text-[11px] font-bold flex items-center gap-1 backdrop-blur-md transition-all shadow-md flex-shrink-0 ${
+              activeLayers.hospital ? 'bg-rose-600 text-white border border-rose-400' : 'bg-white/95 text-slate-800 border border-slate-200'
+            }`}
+          >
+            <span>🏥 Hospitals</span>
+          </button>
+
+          <button
+            onClick={() => toggleLayer('metro')}
+            className={`px-3 py-1.5 rounded-full text-[11px] font-bold flex items-center gap-1 backdrop-blur-md transition-all shadow-md flex-shrink-0 ${
+              activeLayers.metro ? 'bg-indigo-600 text-white border border-indigo-400' : 'bg-white/95 text-slate-800 border border-slate-200'
+            }`}
+          >
+            <span>🚇 Metro</span>
+          </button>
+
+          <button
+            onClick={() => toggleLayer('pharmacy')}
+            className={`px-3 py-1.5 rounded-full text-[11px] font-bold flex items-center gap-1 backdrop-blur-md transition-all shadow-md flex-shrink-0 ${
+              activeLayers.pharmacy ? 'bg-emerald-600 text-white border border-emerald-400' : 'bg-white/95 text-slate-800 border border-slate-200'
+            }`}
+          >
+            <span>💊 Pharmacies</span>
+          </button>
+
+          <button
+            onClick={() => toggleLayer('fuel')}
+            className={`px-3 py-1.5 rounded-full text-[11px] font-bold flex items-center gap-1 backdrop-blur-md transition-all shadow-md flex-shrink-0 ${
+              activeLayers.fuel ? 'bg-amber-600 text-white border border-amber-400' : 'bg-white/95 text-slate-800 border border-slate-200'
+            }`}
+          >
+            <span>⛽ Fuel</span>
+          </button>
+        </div>
+
+        {/* 2. TOP-RIGHT RECENTER BUTTON INSIDE MAP */}
         <button
-          onClick={() => toggleLayer('police')}
-          className={`px-3 py-1.5 rounded-full text-[11px] font-bold flex items-center gap-1 backdrop-blur-md transition-all shadow-md flex-shrink-0 ${
-            activeLayers.police ? 'bg-blue-600 text-white border border-blue-400' : 'bg-white/95 text-slate-800 border border-slate-200'
-          }`}
+          onClick={handleRecenter}
+          className="absolute top-3 right-3 z-[400] px-4 py-1.5 rounded-full bg-white text-[#3E1627] font-bold text-xs shadow-md border border-[#E0D0C9] hover:bg-slate-50 transition-all flex items-center gap-1.5"
         >
-          <span>👮 Police</span>
+          <Compass className="w-3.5 h-3.5 text-[#A3526B]" />
+          <span>Recenter</span>
         </button>
 
-        <button
-          onClick={() => toggleLayer('hospital')}
-          className={`px-3 py-1.5 rounded-full text-[11px] font-bold flex items-center gap-1 backdrop-blur-md transition-all shadow-md flex-shrink-0 ${
-            activeLayers.hospital ? 'bg-rose-600 text-white border border-rose-400' : 'bg-white/95 text-slate-800 border border-slate-200'
-          }`}
-        >
-          <span>🏥 Hospitals</span>
-        </button>
-
-        <button
-          onClick={() => toggleLayer('metro')}
-          className={`px-3 py-1.5 rounded-full text-[11px] font-bold flex items-center gap-1 backdrop-blur-md transition-all shadow-md flex-shrink-0 ${
-            activeLayers.metro ? 'bg-indigo-600 text-white border border-indigo-400' : 'bg-white/95 text-slate-800 border border-slate-200'
-          }`}
-        >
-          <span>🚇 Metro</span>
-        </button>
-
-        <button
-          onClick={() => toggleLayer('pharmacy')}
-          className={`px-3 py-1.5 rounded-full text-[11px] font-bold flex items-center gap-1 backdrop-blur-md transition-all shadow-md flex-shrink-0 ${
-            activeLayers.pharmacy ? 'bg-emerald-600 text-white border border-emerald-400' : 'bg-white/95 text-slate-800 border border-slate-200'
-          }`}
-        >
-          <span>💊 Pharmacies</span>
-        </button>
-
-        <button
-          onClick={() => toggleLayer('fuel')}
-          className={`px-3 py-1.5 rounded-full text-[11px] font-bold flex items-center gap-1 backdrop-blur-md transition-all shadow-md flex-shrink-0 ${
-            activeLayers.fuel ? 'bg-amber-600 text-white border border-amber-400' : 'bg-white/95 text-slate-800 border border-slate-200'
-          }`}
-        >
-          <span>⛽ Fuel</span>
-        </button>
-      </div>
-
-      {/* TOP-RIGHT RECENTER BUTTON MATCHING MAP 1 */}
-      <button
-        onClick={handleRecenter}
-        className="absolute top-3 right-3 z-[450] px-4 py-1.5 rounded-full bg-white text-[#3E1627] font-bold text-xs shadow-md border border-[#E0D0C9] hover:bg-slate-50 transition-all flex items-center gap-1.5"
-      >
-        <Compass className="w-3.5 h-3.5 text-[#A3526B]" />
-        <span>Recenter</span>
-      </button>
-
-      {/* PROMINENT TURN-BY-TURN DIRECTION / NAVIGATION BLOCK ON SCREEN */}
-      <div className="absolute top-14 left-3 right-3 sm:left-4 sm:right-4 z-[450] max-w-2xl mx-auto">
-        <div className={`rounded-3xl p-4 sm:p-5 shadow-2xl backdrop-blur-xl border transition-all ${
-          isLowSignalGlobal 
-            ? 'bg-slate-900/95 border-amber-400/50 text-white ring-1 ring-amber-400/30' 
-            : 'bg-[#5E253B]/95 border-[#A3526B]/40 text-white shadow-pink-950/30'
-        }`}>
-          <div className="flex items-center justify-between gap-3">
-            
-            {/* Step Icon & Current Instruction */}
-            <div className="flex items-center gap-3.5 flex-1 min-w-0">
-              <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 shadow-md ${
-                isLowSignalGlobal ? 'bg-amber-400 text-slate-950 font-black' : 'bg-emerald-500 text-white font-black'
-              }`}>
-                <Navigation className="w-5 h-5 transform rotate-45 animate-pulse" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className={`text-[10px] uppercase tracking-widest font-extrabold px-2 py-0.5 rounded-full ${
-                    isLowSignalGlobal ? 'bg-amber-400/20 text-amber-300' : 'bg-emerald-400/20 text-emerald-200'
-                  }`}>
-                    Step {currentStepIdx + 1} of {steps.length}
-                  </span>
-                  <span className="text-[11px] font-bold opacity-80 truncate">
-                    {selectedRoute.name.split('—')[0]}
-                  </span>
+        {/* 3. PROMINENT TURN-BY-TURN DIRECTION / NAVIGATION BLOCK INSIDE MAP */}
+        <div className="absolute top-14 left-3 right-3 sm:left-4 sm:right-4 z-[400] max-w-2xl mx-auto">
+          <div className={`rounded-3xl p-4 sm:p-5 shadow-2xl backdrop-blur-xl border transition-all ${
+            isLowSignalGlobal 
+              ? 'bg-slate-900/95 border-amber-400/50 text-white ring-1 ring-amber-400/30' 
+              : 'bg-[#5E253B]/95 border-[#A3526B]/40 text-white shadow-pink-950/30'
+          }`}>
+            <div className="flex items-center justify-between gap-3">
+              
+              {/* Step Icon & Current Instruction */}
+              <div className="flex items-center gap-3.5 flex-1 min-w-0">
+                <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 shadow-md ${
+                  isLowSignalGlobal ? 'bg-amber-400 text-slate-950 font-black' : 'bg-emerald-500 text-white font-black'
+                }`}>
+                  <Navigation className="w-5 h-5 transform rotate-45 animate-pulse" />
                 </div>
-                <h3 className="font-extrabold text-sm sm:text-base leading-snug truncate mt-0.5">
-                  {steps[currentStepIdx]}
-                </h3>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`text-[10px] uppercase tracking-widest font-extrabold px-2 py-0.5 rounded-full ${
+                      isLowSignalGlobal ? 'bg-amber-400/20 text-amber-300' : 'bg-emerald-400/20 text-emerald-200'
+                    }`}>
+                      Step {currentStepIdx + 1} of {steps.length}
+                    </span>
+                    <span className="text-[11px] font-bold opacity-80 truncate">
+                      {selectedRoute.name.split('—')[0]}
+                    </span>
+                  </div>
+                  <h3 className="font-extrabold text-sm sm:text-base leading-snug truncate mt-0.5">
+                    {steps[currentStepIdx]}
+                  </h3>
+                </div>
               </div>
+
+              {/* Quick Controls */}
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => setIsVoiceMuted(!isVoiceMuted)}
+                  className={`p-2.5 rounded-full border transition-all ${
+                    isVoiceMuted 
+                      ? 'bg-rose-500/20 text-rose-300 border-rose-500/40' 
+                      : 'bg-white/10 hover:bg-white/20 text-white border-white/20'
+                  }`}
+                  title={isVoiceMuted ? "Unmute Voice Guidance" : "Mute Voice Guidance"}
+                >
+                  {isVoiceMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                </button>
+
+                <button
+                  onClick={() => setShowStepsDrawer(!showStepsDrawer)}
+                  className="px-3 py-2 rounded-full text-xs font-bold bg-white/15 hover:bg-white/25 text-white border border-white/20 transition-all flex items-center gap-1"
+                >
+                  <span>{showStepsDrawer ? "Hide List" : "Directions"}</span>
+                  {showStepsDrawer ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                </button>
+
+                <button
+                  onClick={onEndJourney}
+                  className="px-3.5 py-2 rounded-full text-xs font-bold bg-rose-600/80 hover:bg-rose-600 text-white border border-rose-400/30 transition-all flex items-center gap-1"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Exit</span>
+                </button>
+              </div>
+
             </div>
-
-            {/* Top Right Quick Controls */}
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                onClick={() => setIsVoiceMuted(!isVoiceMuted)}
-                className={`p-2.5 rounded-full border transition-all ${
-                  isVoiceMuted 
-                    ? 'bg-rose-500/20 text-rose-300 border-rose-500/40' 
-                    : 'bg-white/10 hover:bg-white/20 text-white border-white/20'
-                }`}
-                title={isVoiceMuted ? "Unmute Voice Guidance" : "Mute Voice Guidance"}
-              >
-                {isVoiceMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-              </button>
-
-              <button
-                onClick={() => setShowStepsDrawer(!showStepsDrawer)}
-                className="px-3 py-2 rounded-full text-xs font-bold bg-white/15 hover:bg-white/25 text-white border border-white/20 transition-all flex items-center gap-1"
-              >
-                <span>{showStepsDrawer ? "Hide List" : "Directions"}</span>
-                {showStepsDrawer ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-              </button>
-
-              <button
-                onClick={onEndJourney}
-                className="px-3.5 py-2 rounded-full text-xs font-bold bg-rose-600/80 hover:bg-rose-600 text-white border border-rose-400/30 transition-all flex items-center gap-1"
-              >
-                <ArrowLeft className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Exit</span>
-              </button>
-            </div>
-
           </div>
         </div>
-      </div>
 
-      {/* LARGE SCREEN FULL MAP CANVAS */}
-      <div className="relative w-full h-full flex-1 z-10">
+        {/* 4. MAP CONTAINER */}
         <MapContainer
           center={originCoords}
           zoom={14}
@@ -441,14 +443,14 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
           </Marker>
         </MapContainer>
 
-        {/* Collapsible Turn-by-Turn List Drawer overlay */}
+        {/* Collapsible Turn-by-Turn List Drawer overlay INSIDE MAP */}
         <AnimatePresence>
           {showStepsDrawer && (
             <motion.div
               initial={{ opacity: 0, y: 50 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 50 }}
-              className="absolute left-4 right-4 bottom-24 z-[450] max-w-xl mx-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-2xl space-y-3"
+              className="absolute left-4 right-4 bottom-24 z-[400] max-w-xl mx-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-2xl space-y-3"
             >
               <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
                 <h4 className="font-extrabold text-sm text-slate-900 dark:text-white flex items-center gap-2">
