@@ -250,9 +250,12 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
         scrollWheelZoom={true}
         className="w-full h-full"
       >
-        {/* Esri World Street Map Tiles (Zero Watermark Vector Google Map Look) */}
+        {/* Authentic Google Maps Light Theme Tiles (Matching Uploaded Screenshot) */}
         <TileLayer 
-          url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}" 
+          url="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}" 
+          maxZoom={20}
+          subdomains={['mt0', 'mt1', 'mt2', 'mt3']}
+          attribution="&copy; Google Maps"
         />
 
         <ZoomControls />
