@@ -177,6 +177,8 @@ export function App() {
               <LowSignalPage
                 selectedRoute={selectedRoute}
                 onExitLowSignal={() => setIsLowSignalGlobal(false)}
+                origin={origin || "IGDTUW Campus, Kashmiri Gate, Delhi"}
+                destination={destination || "India Gate, New Delhi"}
               />
             )}
           </motion.div>

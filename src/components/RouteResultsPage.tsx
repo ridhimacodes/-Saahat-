@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, MapPin, ChevronDown, ChevronUp, Sun, Sunset, Moon, Bus, Store, Shield, Sparkles, ArrowRight, AlertCircle, Eye, Share2, CheckCircle2, ShieldAlert, ThumbsUp, AlertTriangle, Compass } from 'lucide-react';
+import { Clock, MapPin, ChevronDown, ChevronUp, Sun, Sunset, Moon, Bus, Store, Shield, Sparkles, ArrowRight, AlertCircle, Eye, Share2, CheckCircle2, ShieldAlert, ThumbsUp, AlertTriangle, Compass, Download, HardDrive } from 'lucide-react';
 import { RouteOption, TimeOfDay } from '../types';
 import { InteractiveMap } from './InteractiveMap';
+import { saveJourneyLocally, isRouteDownloaded, estimateStorageSize, getSavedJourneysLocally } from '../utils/offlineStorage';
 
 interface RouteResultsPageProps {
   origin: string;
@@ -34,6 +35,19 @@ export const RouteResultsPage: React.FC<RouteResultsPageProps> = ({
   const [expandedScoreId, setExpandedScoreId] = useState<string | null>(selectedRouteId);
   const selectedRoute = routes.find(r => r.id === selectedRouteId) || routes[0];
 
+  const [downloadedRouteIds, setDownloadedRouteIds] = useState<string[]>(() =>
+    getSavedJourneysLocally().map(j => j.id)
+  );
+  const [downloadToast, setDownloadToast] = useState<string | null>(null);
+
+  const handleDownloadRoute = (targetRoute: RouteOption) => {
+    saveJourneyLocally(origin, destination, targetRoute);
+    setDownloadedRouteIds(prev => Array.from(new Set([...prev, targetRoute.id])));
+    const sizeEst = estimateStorageSize(targetRoute);
+    setDownloadToast(`Route "${targetRoute.name.split('—')[0].trim()}" saved for offline use ✓ (${sizeEst})`);
+    setTimeout(() => setDownloadToast(null), 4000);
+  };
+
   const toggleExpandScore = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setExpandedScoreId(expandedScoreId === id ? null : id);
@@ -53,7 +67,21 @@ export const RouteResultsPage: React.FC<RouteResultsPageProps> = ({
     <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-8 font-sans ${
       isLowSignalGlobal ? 'text-slate-100' : 'bg-[#F9F4F0]'
     }`}>
-      
+      {/* Toast Notification for Offline Download */}
+      <AnimatePresence>
+        {downloadToast && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            className="fixed top-6 right-6 z-50 bg-slate-900 text-amber-300 px-5 py-3 rounded-2xl shadow-2xl border border-amber-400/50 flex items-center gap-3 text-xs font-bold"
+          >
+            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+            <span>{downloadToast}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Search Parameters & Selected Time Status Header Bar */}
       <div className={`rounded-3xl p-5 border shadow-sm space-y-4 ${
         isLowSignalGlobal ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-[#E8D8D3]'
@@ -200,6 +228,32 @@ export const RouteResultsPage: React.FC<RouteResultsPageProps> = ({
                             Selected
                           </span>
                         )}
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDownloadRoute(route);
+                          }}
+                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border transition-all flex items-center gap-1 shadow-2xs ${
+                            downloadedRouteIds.includes(route.id)
+                              ? (isLowSignalGlobal ? 'bg-emerald-950 text-emerald-300 border-emerald-500/50' : 'bg-emerald-100 text-emerald-900 border-emerald-300')
+                              : (isLowSignalGlobal ? 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-slate-700' : 'bg-[#F2E6E2] hover:bg-[#E8D8D3] text-[#5E253B] border-[#E0D0C9]')
+                          }`}
+                          title={downloadedRouteIds.includes(route.id) ? "Route Saved Offline ✓" : "Download Route for Offline Use"}
+                        >
+                          {downloadedRouteIds.includes(route.id) ? (
+                            <>
+                              <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                              <span>Offline Ready ({estimateStorageSize(route)})</span>
+                            </>
+                          ) : (
+                            <>
+                              <Download className="w-3 h-3 text-[#A3526B]" />
+                              <span>Download Offline</span>
+                            </>
+                          )}
+                        </button>
                       </div>
                       <p className={`text-xs font-medium ${isLowSignalGlobal ? 'text-slate-300' : 'text-[#7E5767]'}`}>
                         {route.via}

@@ -124,14 +124,14 @@ const ZoomControls: React.FC = () => {
 interface InteractiveMapProps {
   routes: RouteOption[];
   selectedRouteId: string;
-  onSelectRoute: (id: string) => void;
+  onSelectRoute?: (id: string) => void;
   isLowSignalGlobal?: boolean;
 }
 
 export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   routes,
   selectedRouteId,
-  onSelectRoute,
+  onSelectRoute = () => {},
   isLowSignalGlobal
 }) => {
   const selectedRoute = routes.find(r => r.id === selectedRouteId) || routes[0];
