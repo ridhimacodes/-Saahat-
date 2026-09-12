@@ -55,22 +55,28 @@ export const RouteResultsPage: React.FC<RouteResultsPageProps> = ({
     }`}>
       
       {/* Search Parameters & Selected Time Status Header Bar */}
-      <div className="bg-white rounded-3xl p-5 border border-[#E8D8D3] shadow-sm space-y-4">
+      <div className={`rounded-3xl p-5 border shadow-sm space-y-4 ${
+        isLowSignalGlobal ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-[#E8D8D3]'
+      }`}>
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#F2E6E2] flex items-center justify-center text-[#5E253B] shrink-0">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
+              isLowSignalGlobal ? 'bg-amber-400/20 text-amber-300' : 'bg-[#F2E6E2] text-[#5E253B]'
+            }`}>
               <MapPin className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap text-sm">
-                <span className="font-bold text-[#3E1627]">{origin.split(',')[0]}</span>
-                <span className="text-[#A3526B] font-bold">→</span>
-                <span className="font-bold text-[#1E6B45]">{destination.split(',')[0]}</span>
+                <span className={`font-bold ${isLowSignalGlobal ? 'text-white' : 'text-[#3E1627]'}`}>{origin.split(',')[0]}</span>
+                <span className={`font-bold ${isLowSignalGlobal ? 'text-amber-400' : 'text-[#A3526B]'}`}>→</span>
+                <span className={`font-bold ${isLowSignalGlobal ? 'text-emerald-400' : 'text-[#1E6B45]'}`}>{destination.split(',')[0]}</span>
               </div>
-              <p className="text-xs font-medium text-[#7E5767] mt-0.5 flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-[#A3526B]" />
+              <p className={`text-xs font-medium mt-0.5 flex items-center gap-1.5 ${isLowSignalGlobal ? 'text-slate-300' : 'text-[#7E5767]'}`}>
+                <Clock className={`w-3.5 h-3.5 ${isLowSignalGlobal ? 'text-amber-400' : 'text-[#A3526B]'}`} />
                 <span>Evaluated for Departure Time:</span>
-                <span className="font-bold text-[#3E1627] bg-[#F2E6E2] px-2.5 py-0.5 rounded-full border border-[#E0D0C9]">
+                <span className={`font-bold px-2.5 py-0.5 rounded-full border ${
+                  isLowSignalGlobal ? 'text-amber-300 bg-amber-400/20 border-amber-400/40' : 'text-[#3E1627] bg-[#F2E6E2] border-[#E0D0C9]'
+                }`}>
                   {getTimeLabel(timeOfDay)}
                 </span>
               </p>
@@ -79,7 +85,11 @@ export const RouteResultsPage: React.FC<RouteResultsPageProps> = ({
 
           <button
             onClick={onBackToSearch}
-            className="px-5 py-2 rounded-full text-xs font-bold bg-[#F2E6E2] hover:bg-[#E8D8D3] text-[#5E253B] border border-[#E0D0C9] transition-all shadow-xs shrink-0"
+            className={`px-5 py-2 rounded-full text-xs font-bold border transition-all shadow-xs shrink-0 ${
+              isLowSignalGlobal
+                ? 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-slate-600'
+                : 'bg-[#F2E6E2] hover:bg-[#E8D8D3] text-[#5E253B] border-[#E0D0C9]'
+            }`}
           >
             Change Parameters
           </button>
@@ -92,11 +102,15 @@ export const RouteResultsPage: React.FC<RouteResultsPageProps> = ({
         {/* Left Column: Real Map Display */}
         <div className="lg:col-span-6 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-serif font-bold text-[#3E1627] flex items-center gap-2">
-              <Eye className="w-5 h-5 text-[#A3526B]" />
+            <h2 className={`text-lg font-serif font-bold flex items-center gap-2 ${
+              isLowSignalGlobal ? 'text-white' : 'text-[#3E1627]'
+            }`}>
+              <Eye className={`w-5 h-5 ${isLowSignalGlobal ? 'text-amber-400' : 'text-[#A3526B]'}`} />
               <span>Real Route Map Preview ({routes.length} Paths)</span>
             </h2>
-            <span className="text-xs text-[#7E5767] font-medium">Click routes to select</span>
+            <span className={`text-xs font-medium ${isLowSignalGlobal ? 'text-slate-300' : 'text-[#7E5767]'}`}>
+              Click routes to select
+            </span>
           </div>
 
           <InteractiveMap
@@ -107,8 +121,14 @@ export const RouteResultsPage: React.FC<RouteResultsPageProps> = ({
           />
 
           {/* Context Disclaimer */}
-          <div className="p-4 rounded-2xl text-xs bg-white border border-[#E8D8D3] text-[#6E4B59] flex items-start gap-2.5 shadow-2xs">
-            <AlertCircle className="w-4 h-4 text-[#A3526B] flex-shrink-0 mt-0.5" />
+          <div className={`p-4 rounded-2xl text-xs flex items-start gap-2.5 shadow-2xs border ${
+            isLowSignalGlobal 
+              ? 'bg-slate-900 border-slate-700 text-slate-200' 
+              : 'bg-white border-[#E8D8D3] text-[#6E4B59]'
+          }`}>
+            <AlertCircle className={`w-4 h-4 flex-shrink-0 mt-0.5 ${
+              isLowSignalGlobal ? 'text-amber-400' : 'text-[#A3526B]'
+            }`} />
             <p className="leading-relaxed">
               <strong>Context Disclaimer:</strong> SAHAAT evaluates factual environmental signals (lighting, footfall, transit, open businesses) to give you total control.
             </p>
@@ -118,10 +138,14 @@ export const RouteResultsPage: React.FC<RouteResultsPageProps> = ({
         {/* Right Column: Comparative Route Cards */}
         <div className="lg:col-span-6 space-y-5">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-serif font-bold text-[#3E1627]">
+            <h2 className={`text-lg font-serif font-bold ${isLowSignalGlobal ? 'text-white' : 'text-[#3E1627]'}`}>
               Evaluated Options ({routes.length})
             </h2>
-            <span className="text-xs font-bold text-[#1E6B45] bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+            <span className={`text-xs font-bold px-3 py-1 rounded-full border ${
+              isLowSignalGlobal
+                ? 'text-amber-300 bg-amber-400/20 border-amber-400/40'
+                : 'text-[#1E6B45] bg-emerald-50 border-emerald-200'
+            }`}>
               Evaluated for {timeOfDay === 'day' ? 'Daytime' : timeOfDay === 'evening' ? 'Evening' : timeOfDay === 'night' ? 'Night' : 'Late Night'}
             </span>
           </div>
@@ -142,16 +166,16 @@ export const RouteResultsPage: React.FC<RouteResultsPageProps> = ({
                   className={`rounded-3xl border p-5 sm:p-6 transition-all duration-300 cursor-pointer relative overflow-hidden ${
                     isSelected
                       ? (isBestMatch 
-                          ? 'bg-white border-[#1E6B45] ring-2 ring-[#1E6B45]/30 shadow-xl' 
-                          : 'bg-white border-[#A3526B] ring-2 ring-[#A3526B]/30 shadow-xl')
-                      : 'bg-white/80 border-[#E8D8D3] hover:border-[#A3526B] shadow-sm'
+                          ? (isLowSignalGlobal ? 'bg-slate-900 border-emerald-400 ring-2 ring-emerald-400/40 shadow-xl' : 'bg-white border-[#1E6B45] ring-2 ring-[#1E6B45]/30 shadow-xl') 
+                          : (isLowSignalGlobal ? 'bg-slate-900 border-amber-400 ring-2 ring-amber-400/40 shadow-xl' : 'bg-white border-[#A3526B] ring-2 ring-[#A3526B]/30 shadow-xl'))
+                      : (isLowSignalGlobal ? 'bg-slate-900/90 border-slate-700 hover:border-slate-500 shadow-sm' : 'bg-white/80 border-[#E8D8D3] hover:border-[#A3526B] shadow-sm')
                   }`}
                 >
                   {/* Selected Indicator Strip */}
                   {isSelected && (
                     <div 
                       className="absolute top-0 left-0 bottom-0 w-2 shadow-sm"
-                      style={{ backgroundColor: route.color || (isBestMatch ? '#1E6B45' : '#A3526B') }}
+                      style={{ backgroundColor: route.color || (isBestMatch ? (isLowSignalGlobal ? '#34D399' : '#1E6B45') : (isLowSignalGlobal ? '#FBBF24' : '#A3526B')) }}
                     />
                   )}
 
@@ -159,7 +183,7 @@ export const RouteResultsPage: React.FC<RouteResultsPageProps> = ({
                   <div className="flex items-start justify-between gap-4 mb-3">
                     <div>
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <h3 className="font-bold text-base sm:text-lg text-[#3E1627]">
+                        <h3 className={`font-bold text-base sm:text-lg ${isLowSignalGlobal ? 'text-white' : 'text-[#3E1627]'}`}>
                           {route.name}
                         </h3>
                         {isBestMatch && (
@@ -170,13 +194,13 @@ export const RouteResultsPage: React.FC<RouteResultsPageProps> = ({
                         {isSelected && (
                           <span 
                             className="px-2.5 py-0.5 rounded-full text-white text-[10px] font-bold shadow-sm"
-                            style={{ backgroundColor: route.color || (isBestMatch ? '#1E6B45' : '#A3526B') }}
+                            style={{ backgroundColor: route.color || (isBestMatch ? (isLowSignalGlobal ? '#059669' : '#1E6B45') : (isLowSignalGlobal ? '#D97706' : '#A3526B')) }}
                           >
                             Selected
                           </span>
                         )}
                       </div>
-                      <p className="text-xs font-medium text-[#7E5767]">
+                      <p className={`text-xs font-medium ${isLowSignalGlobal ? 'text-slate-300' : 'text-[#7E5767]'}`}>
                         {route.via}
                       </p>
                     </div>
@@ -184,12 +208,14 @@ export const RouteResultsPage: React.FC<RouteResultsPageProps> = ({
                     {/* Score Badge */}
                     <div className="text-right flex-shrink-0">
                       <div className={`inline-flex items-baseline gap-1 px-3 py-1 rounded-2xl font-extrabold text-lg ${
-                        isBestMatch ? 'bg-emerald-50 text-[#1E6B45] border border-emerald-200' : 'bg-purple-50 text-[#5E253B] border border-purple-200'
+                        isBestMatch 
+                          ? (isLowSignalGlobal ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/50' : 'bg-emerald-50 text-[#1E6B45] border border-emerald-200')
+                          : (isLowSignalGlobal ? 'bg-amber-950/80 text-amber-300 border border-amber-500/50' : 'bg-purple-50 text-[#5E253B] border border-purple-200')
                       }`}>
                         <span>{route.comfortScore}</span>
                         <span className="text-xs font-normal opacity-70">/10</span>
                       </div>
-                      <span className="block text-[10px] font-semibold text-[#7E5767] mt-0.5">
+                      <span className={`block text-[10px] font-semibold mt-0.5 ${isLowSignalGlobal ? 'text-slate-400' : 'text-[#7E5767]'}`}>
                         Journey Fit
                       </span>
                     </div>
@@ -198,40 +224,58 @@ export const RouteResultsPage: React.FC<RouteResultsPageProps> = ({
                   {/* Time Band Highlight Tag Badge */}
                   <div className="mb-3">
                     <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold border ${
-                      route.tag.type === 'recommended'
-                        ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
-                        : route.tag.type === 'positive'
-                        ? 'bg-blue-100 text-blue-900 border-blue-300'
-                        : 'bg-amber-100 text-amber-900 border-amber-300'
+                      isLowSignalGlobal
+                        ? (route.tag.type === 'recommended'
+                            ? 'bg-emerald-950 text-emerald-300 border-emerald-500/50'
+                            : route.tag.type === 'positive'
+                            ? 'bg-sky-950 text-sky-300 border-sky-500/50'
+                            : 'bg-amber-950 text-amber-300 border-amber-500/50')
+                        : (route.tag.type === 'recommended'
+                            ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                            : route.tag.type === 'positive'
+                            ? 'bg-blue-100 text-blue-900 border-blue-300'
+                            : 'bg-amber-100 text-amber-900 border-amber-300')
                     }`}>
                       {route.tag.text}
                     </span>
                   </div>
 
                   {/* Duration & Distance Pill Metrics */}
-                  <div className="flex items-center gap-3 text-xs font-bold text-[#3E1627] mb-3">
-                    <div className="flex items-center gap-1 bg-[#F2E6E2] text-[#5E253B] px-3 py-1.5 rounded-full">
-                      <Clock className="w-3.5 h-3.5 text-[#A3526B]" />
+                  <div className={`flex items-center gap-3 text-xs font-bold mb-3 ${isLowSignalGlobal ? 'text-slate-100' : 'text-[#3E1627]'}`}>
+                    <div className={`flex items-center gap-1 px-3 py-1.5 rounded-full ${
+                      isLowSignalGlobal ? 'bg-slate-800 text-amber-300 border border-slate-700' : 'bg-[#F2E6E2] text-[#5E253B]'
+                    }`}>
+                      <Clock className={`w-3.5 h-3.5 ${isLowSignalGlobal ? 'text-amber-400' : 'text-[#A3526B]'}`} />
                       <span>{route.durationMinutes} min</span>
                     </div>
-                    <div className="flex items-center gap-1 bg-[#F2E6E2] text-[#5E253B] px-3 py-1.5 rounded-full">
-                      <MapPin className="w-3.5 h-3.5 text-[#1E6B45]" />
+                    <div className={`flex items-center gap-1 px-3 py-1.5 rounded-full ${
+                      isLowSignalGlobal ? 'bg-slate-800 text-emerald-300 border border-slate-700' : 'bg-[#F2E6E2] text-[#5E253B]'
+                    }`}>
+                      <MapPin className={`w-3.5 h-3.5 ${isLowSignalGlobal ? 'text-emerald-400' : 'text-[#1E6B45]'}`} />
                       <span>{route.distanceKm} km</span>
                     </div>
                   </div>
 
                   {/* PROS & CONS COMPARISON */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4 pt-3 border-t border-[#F5ECE8]">
+                  <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4 pt-3 border-t ${
+                    isLowSignalGlobal ? 'border-slate-800' : 'border-[#F5ECE8]'
+                  }`}>
                     {/* PROS CARD */}
-                    <div className="bg-emerald-50/80 p-3 rounded-2xl border border-emerald-200 space-y-1.5">
-                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#1E6B45] flex items-center gap-1">
-                        <ThumbsUp className="w-3.5 h-3.5 text-[#1E6B45]" />
+                    <div className={`p-3 rounded-2xl border space-y-1.5 ${
+                      isLowSignalGlobal ? 'bg-emerald-950/40 border-emerald-800/60' : 'bg-emerald-50/80 border-emerald-200'
+                    }`}>
+                      <span className={`text-[11px] font-extrabold uppercase tracking-wider flex items-center gap-1 ${
+                        isLowSignalGlobal ? 'text-emerald-300' : 'text-[#1E6B45]'
+                      }`}>
+                        <ThumbsUp className={`w-3.5 h-3.5 ${isLowSignalGlobal ? 'text-emerald-300' : 'text-[#1E6B45]'}`} />
                         Pros / Advantages
                       </span>
                       <ul className="space-y-1">
                         {route.pros?.map((pro, pIdx) => (
-                          <li key={pIdx} className="text-[11px] font-semibold text-emerald-950 flex items-start gap-1.5 leading-tight">
-                            <span className="text-[#1E6B45] font-bold">•</span>
+                          <li key={pIdx} className={`text-[11px] font-semibold flex items-start gap-1.5 leading-tight ${
+                            isLowSignalGlobal ? 'text-emerald-200' : 'text-emerald-950'
+                          }`}>
+                            <span className={`${isLowSignalGlobal ? 'text-emerald-400' : 'text-[#1E6B45]'} font-bold`}>•</span>
                             <span>{pro}</span>
                           </li>
                         ))}
@@ -239,15 +283,21 @@ export const RouteResultsPage: React.FC<RouteResultsPageProps> = ({
                     </div>
 
                     {/* CONS CARD */}
-                    <div className="bg-amber-50/80 p-3 rounded-2xl border border-amber-200 space-y-1.5">
-                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-amber-800 flex items-center gap-1">
-                        <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+                    <div className={`p-3 rounded-2xl border space-y-1.5 ${
+                      isLowSignalGlobal ? 'bg-amber-950/40 border-amber-800/60' : 'bg-amber-50/80 border-amber-200'
+                    }`}>
+                      <span className={`text-[11px] font-extrabold uppercase tracking-wider flex items-center gap-1 ${
+                        isLowSignalGlobal ? 'text-amber-300' : 'text-amber-800'
+                      }`}>
+                        <AlertTriangle className={`w-3.5 h-3.5 ${isLowSignalGlobal ? 'text-amber-400' : 'text-amber-600'}`} />
                         Cons / Trade-offs
                       </span>
                       <ul className="space-y-1">
                         {route.cons?.map((con, cIdx) => (
-                          <li key={cIdx} className="text-[11px] font-semibold text-amber-950 flex items-start gap-1.5 leading-tight">
-                            <span className="text-amber-600 font-bold">•</span>
+                          <li key={cIdx} className={`text-[11px] font-semibold flex items-start gap-1.5 leading-tight ${
+                            isLowSignalGlobal ? 'text-amber-200' : 'text-amber-950'
+                          }`}>
+                            <span className={`${isLowSignalGlobal ? 'text-amber-400' : 'text-amber-600'} font-bold`}>•</span>
                             <span>{con}</span>
                           </li>
                         ))}
@@ -256,10 +306,12 @@ export const RouteResultsPage: React.FC<RouteResultsPageProps> = ({
                   </div>
 
                   {/* Accordion "Why this route?" */}
-                  <div className="pt-2 border-t border-[#F5ECE8]">
+                  <div className={`pt-2 border-t ${isLowSignalGlobal ? 'border-slate-800' : 'border-[#F5ECE8]'}`}>
                     <button
                       onClick={(e) => toggleExpandScore(route.id, e)}
-                      className="w-full flex items-center justify-between text-xs font-bold text-[#A3526B] hover:text-[#5E253B] transition-colors py-1"
+                      className={`w-full flex items-center justify-between text-xs font-bold transition-colors py-1 ${
+                        isLowSignalGlobal ? 'text-amber-300 hover:text-amber-200' : 'text-[#A3526B] hover:text-[#5E253B]'
+                      }`}
                     >
                       <span>Why this score?</span>
                       {isExpanded ? (
@@ -275,20 +327,24 @@ export const RouteResultsPage: React.FC<RouteResultsPageProps> = ({
                           initial={{ opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: 'auto' }}
                           exit={{ opacity: 0, height: 0 }}
-                          className="overflow-hidden pt-3 text-xs space-y-2.5 text-slate-600"
+                          className={`overflow-hidden pt-3 text-xs space-y-2.5 ${
+                            isLowSignalGlobal ? 'text-slate-300' : 'text-slate-600'
+                          }`}
                         >
-                          <p className="bg-[#F9F4F0] p-3 rounded-2xl border border-[#E8D8D3] font-medium text-[#3E1627]">
+                          <p className={`p-3 rounded-2xl border font-medium ${
+                            isLowSignalGlobal ? 'bg-slate-800/90 border-slate-700 text-slate-100' : 'bg-[#F9F4F0] border-[#E8D8D3] text-[#3E1627]'
+                          }`}>
                             {route.scoreDetails.summaryExplanation}
                           </p>
 
-                          <div className="space-y-1.5 pl-1 text-[#6E4B59]">
+                          <div className={`space-y-1.5 pl-1 ${isLowSignalGlobal ? 'text-slate-300' : 'text-[#6E4B59]'}`}>
                             <div className="flex justify-between">
                               <span>Lighting Continuity:</span>
-                              <span className="font-bold text-[#3E1627]">{route.scoreDetails.lightingScore}/10</span>
+                              <span className={`font-bold ${isLowSignalGlobal ? 'text-amber-300' : 'text-[#3E1627]'}`}>{route.scoreDetails.lightingScore}/10</span>
                             </div>
                             <div className="flex justify-between pt-1">
                               <span>Open Business Presence:</span>
-                              <span className="font-bold text-[#3E1627]">{route.scoreDetails.commercialScore}/10</span>
+                              <span className={`font-bold ${isLowSignalGlobal ? 'text-amber-300' : 'text-[#3E1627]'}`}>{route.scoreDetails.commercialScore}/10</span>
                             </div>
                           </div>
                         </motion.div>
@@ -306,7 +362,11 @@ export const RouteResultsPage: React.FC<RouteResultsPageProps> = ({
             {/* Button 1: Proceed with Journey Only */}
             <button
               onClick={() => onProceedOnly(selectedRoute)}
-              className="w-full sm:w-1/2 py-4 rounded-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-sm shadow-md hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2"
+              className={`w-full sm:w-1/2 py-4 rounded-full font-bold text-sm shadow-md hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 ${
+                isLowSignalGlobal 
+                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400/50' 
+                  : 'bg-emerald-700 hover:bg-emerald-800 text-white'
+              }`}
             >
               <Compass className="w-4 h-4 text-emerald-200" />
               <span>Proceed with Journey</span>
@@ -315,7 +375,11 @@ export const RouteResultsPage: React.FC<RouteResultsPageProps> = ({
             {/* Button 2: Proceed & Share ETA */}
             <button
               onClick={() => onSelectAndShare(selectedRoute)}
-              className="w-full sm:w-1/2 py-4 rounded-full bg-[#A3526B] hover:bg-[#8F445B] text-white font-bold text-sm shadow-xl hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2"
+              className={`w-full sm:w-1/2 py-4 rounded-full font-bold text-sm shadow-xl hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 ${
+                isLowSignalGlobal 
+                  ? 'bg-amber-600 hover:bg-amber-500 text-slate-950 font-extrabold border border-amber-400' 
+                  : 'bg-[#A3526B] hover:bg-[#8F445B] text-white'
+              }`}
             >
               <Share2 className="w-4 h-4" />
               <span>Proceed & Share ETA</span>
