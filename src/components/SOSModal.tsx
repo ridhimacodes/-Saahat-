@@ -77,17 +77,12 @@ export const SOSModal: React.FC<SOSModalProps> = ({
           onClick={handleOpenSOS}
           whileHover={{ scale: 1.08 }}
           whileTap={{ scale: 0.95 }}
-          className="relative group flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-gradient-to-r from-rose-600 via-red-600 to-pink-600 text-white font-extrabold text-sm shadow-2xl shadow-rose-600/50 hover:shadow-rose-600/70 border-2 border-white/90 backdrop-blur-sm transition-shadow overflow-hidden"
-          title="Hold & Drag to reposition • Click for Emergency SOS"
+          className="relative group flex items-center gap-2.5 px-4 py-3 rounded-full bg-gradient-to-r from-rose-600 via-red-600 to-pink-600 text-white font-extrabold text-sm shadow-2xl shadow-rose-600/50 hover:shadow-rose-600/70 border-2 border-white/90 backdrop-blur-sm transition-shadow overflow-hidden"
+          title="Click for Emergency SOS • Drag to reposition"
         >
           <span className="absolute inset-0 rounded-full bg-rose-500 animate-ping opacity-30 pointer-events-none" />
           <AlertTriangle className="w-5 h-5 text-amber-200 animate-bounce flex-shrink-0" />
-          <div className="flex flex-col items-start leading-tight">
-            <span className="tracking-wide uppercase font-black text-xs">SOS Emergency</span>
-            <span className="text-[9px] font-bold text-rose-200 opacity-80 flex items-center gap-1">
-              <span className="text-[10px]">⠿</span> Drag to Move
-            </span>
-          </div>
+          <span className="tracking-wide uppercase font-black text-xs">SOS Emergency</span>
         </motion.button>
       </motion.div>
 
