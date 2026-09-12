@@ -29,7 +29,7 @@ export const loadGoogleMapsScript = (apiKey: string): Promise<boolean> => {
 
     const script = document.createElement('script');
     script.id = scriptId;
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry`;
     script.async = true;
     script.defer = true;
     script.onload = () => resolve(true);

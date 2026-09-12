@@ -1,5 +1,10 @@
 import { RouteOption, RouteConditionIcon, RouteHighlight } from '../types';
 import { searchLocations } from './geocoding';
+import { 
+  getGoogleDirections, 
+  getGooglePlaceDetails, 
+  geocodeGoogleAddress 
+} from './googleMapsService';
 
 // Default Fallback Coordinates across Major Indian Cities
 const DEFAULT_LOCATIONS: Record<string, [number, number]> = {
@@ -124,29 +129,57 @@ export interface GeocodedLocation {
 
 export async function geocodeLocationQuery(query: string, referenceLoc?: [number, number]): Promise<GeocodedLocation> {
   const cleanQuery = query.trim();
+
+  // 1. Check for embedded placeId metadata e.g. [placeId:ChIJ...]
+  const placeIdMatch = cleanQuery.match(/\[placeId:([^\]]+)\]/);
+  if (placeIdMatch && placeIdMatch[1]) {
+    const pId = placeIdMatch[1];
+    if (!pId.startsWith('p') && !pId.includes('-') && !pId.includes('gps')) {
+      const details = await getGooglePlaceDetails(pId);
+      if (details) {
+        return { name: details.name || cleanQuery.split('(')[0].trim(), lat: details.lat, lng: details.lng };
+      }
+    }
+  }
+
+  // 2. Check for embedded GPS / Lat-Lng coordinates e.g. (18.940100, 72.835300)
+  const gpsMatch = cleanQuery.match(/\((-?\d+\.\d+),\s*(-?\d+\.\d+)\)/);
+  if (gpsMatch) {
+    return {
+      name: cleanQuery.split('(')[0].trim() || cleanQuery,
+      lat: parseFloat(gpsMatch[1]),
+      lng: parseFloat(gpsMatch[2])
+    };
+  }
+
+  // 3. Try Google Geocoder API
+  try {
+    const googleGeocoded = await geocodeGoogleAddress(cleanQuery);
+    if (googleGeocoded && googleGeocoded.lat && googleGeocoded.lng) {
+      return {
+        name: googleGeocoded.name || cleanQuery.split('(')[0].trim(),
+        lat: googleGeocoded.lat,
+        lng: googleGeocoded.lng
+      };
+    }
+  } catch (err) {
+    console.warn("Google geocoding error:", err);
+  }
+
   const lowerQuery = cleanQuery.toLowerCase();
 
   // Try exact or partial matches in DEFAULT_LOCATIONS first
   for (const [key, coords] of Object.entries(DEFAULT_LOCATIONS)) {
     if (lowerQuery.includes(key) || key.includes(lowerQuery)) {
-      return { name: cleanQuery, lat: coords[0], lng: coords[1] };
+      return { name: cleanQuery.split('(')[0].trim(), lat: coords[0], lng: coords[1] };
     }
-  }
-
-  const gpsMatch = cleanQuery.match(/\((-?\d+\.\d+),\s*(-?\d+\.\d+)\)/);
-  if (gpsMatch) {
-    return {
-      name: cleanQuery,
-      lat: parseFloat(gpsMatch[1]),
-      lng: parseFloat(gpsMatch[2])
-    };
   }
 
   try {
     const results = await searchLocations(cleanQuery);
     if (results && results.length > 0) {
       return {
-        name: cleanQuery,
+        name: cleanQuery.split('(')[0].trim(),
         lat: results[0].lat,
         lng: results[0].lng
       };
@@ -155,28 +188,25 @@ export async function geocodeLocationQuery(query: string, referenceLoc?: [number
     console.warn('Geocoding search failed:', err);
   }
 
-  // If geocoding failed and a reference location (e.g. origin location) is provided,
-  // anchor fallback relative to origin in the SAME city (offset ~2.5km) to prevent cross-country polyline bugs!
   if (referenceLoc) {
     return {
-      name: cleanQuery,
+      name: cleanQuery.split('(')[0].trim(),
       lat: referenceLoc[0] + 0.022,
       lng: referenceLoc[1] + 0.018
     };
   }
 
-  // If no reference location is provided, check query for city keywords
   if (lowerQuery.includes('mumbai') || lowerQuery.includes('cst') || lowerQuery.includes('marine') || lowerQuery.includes('bandra') || lowerQuery.includes('dadar')) {
-    return { name: cleanQuery, lat: 18.9401, lng: 72.8353 }; // Mumbai CST default
+    return { name: cleanQuery.split('(')[0].trim(), lat: 18.9401, lng: 72.8353 };
   }
   if (lowerQuery.includes('bengaluru') || lowerQuery.includes('bangalore') || lowerQuery.includes('indiranagar')) {
-    return { name: cleanQuery, lat: 12.9716, lng: 77.5946 }; // Bengaluru default
+    return { name: cleanQuery.split('(')[0].trim(), lat: 12.9716, lng: 77.5946 };
   }
   if (lowerQuery.includes('hyderabad') || lowerQuery.includes('gachibowli')) {
-    return { name: cleanQuery, lat: 17.3850, lng: 78.4867 }; // Hyderabad default
+    return { name: cleanQuery.split('(')[0].trim(), lat: 17.3850, lng: 78.4867 };
   }
 
-  return { name: cleanQuery, lat: 28.6653, lng: 77.2324 }; // Delhi Kashmere Gate default
+  return { name: cleanQuery.split('(')[0].trim(), lat: 28.6653, lng: 77.2324 };
 }
 
 export function getDynamicRouteNames(originQuery: string, destQuery: string) {
@@ -338,7 +368,11 @@ export function getDynamicRouteNames(originQuery: string, destQuery: string) {
 }
 
 // Generate 4 distinct route options for any searched origin-destination pair in India
-export async function generateRealRoutes(originQuery: string, destQuery: string): Promise<RouteOption[]> {
+export async function generateRealRoutes(
+  originQuery: string, 
+  destQuery: string,
+  travelMode: 'WALKING' | 'DRIVING' | 'BICYCLING' | 'TRANSIT' = 'WALKING'
+): Promise<RouteOption[]> {
   const originLoc = await geocodeLocationQuery(originQuery);
   // Pass originLoc coordinates as referenceLoc so destination fallback is ALWAYS in the SAME city!
   const destLoc = await geocodeLocationQuery(destQuery, [originLoc.lat, originLoc.lng]);
@@ -346,9 +380,16 @@ export async function generateRealRoutes(originQuery: string, destQuery: string)
   let startCoord: [number, number] = [originLoc.lat, originLoc.lng];
   let endCoord: [number, number] = [destLoc.lat, destLoc.lng];
 
+  // Try fetching real Google Directions API results!
+  const googleRoutes = await getGoogleDirections(
+    { lat: startCoord[0], lng: startCoord[1] },
+    { lat: endCoord[0], lng: endCoord[1] },
+    travelMode
+  );
+
   let airDistance = calculateHaversineDistance(startCoord[0], startCoord[1], endCoord[0], endCoord[1]);
 
-  // Sanity check: If distance is > 120km and user did not explicitly request a inter-city trip with two distinct city names,
+  // Sanity check: If distance is > 120km and user did not explicitly request an inter-city trip with two distinct city names,
   // anchor destination to local city bounds to prevent erroneous cross-country polylines.
   const lowerOrig = originQuery.toLowerCase();
   const lowerDest = destQuery.toLowerCase();
@@ -358,24 +399,45 @@ export async function generateRealRoutes(originQuery: string, destQuery: string)
     (lowerOrig.includes('bengaluru') && lowerDest.includes('chennai'))
   );
 
-  if (airDistance > 120 && !isExplicitInterCity) {
+  if (airDistance > 120 && !isExplicitInterCity && (!googleRoutes || googleRoutes.length === 0)) {
     endCoord = [startCoord[0] + 0.025, startCoord[1] + 0.020];
     airDistance = calculateHaversineDistance(startCoord[0], startCoord[1], endCoord[0], endCoord[1]);
   }
 
-  // Multiply Haversine distance by 1.35 to account for real urban road network curvature in India
-  const baseDistance = airDistance > 0.3 ? parseFloat((airDistance * 1.35).toFixed(1)) : 2.5;
-  // Calculate duration assuming average city travel speed (~1.8 minutes per road km)
-  const baseMinutes = Math.max(5, Math.round(baseDistance * 1.85));
+  // Use Google Routes API distance & duration if available, else calculated distance
+  const baseDistance = (googleRoutes && googleRoutes.length > 0)
+    ? googleRoutes[0].distanceKm
+    : (airDistance > 0.3 ? parseFloat((airDistance * 1.35).toFixed(1)) : 2.5);
 
-  // 4 Dynamic Geometries for 4 Route Options
-  const route1_Coords = generateCurvedPolyline(startCoord, endCoord, 0.04);
-  const route2_Coords = generateCurvedPolyline(startCoord, endCoord, -0.05);
-  const route3_Coords = generateCurvedPolyline(startCoord, endCoord, 0.08);
-  const route4_Coords = generateCurvedPolyline(startCoord, endCoord, -0.10);
+  const baseMinutes = (googleRoutes && googleRoutes.length > 0)
+    ? googleRoutes[0].durationMinutes
+    : Math.max(5, Math.round(baseDistance * 1.85));
+
+  // 4 Dynamic Geometries for 4 Route Options using Google polyline paths when available
+  const route1_Coords = (googleRoutes[0] && googleRoutes[0].coordinates.length > 2)
+    ? googleRoutes[0].coordinates
+    : generateCurvedPolyline(startCoord, endCoord, 0.04);
+
+  const route2_Coords = (googleRoutes[1] && googleRoutes[1].coordinates.length > 2)
+    ? googleRoutes[1].coordinates
+    : (googleRoutes[0] && googleRoutes[0].coordinates.length > 2
+        ? googleRoutes[0].coordinates
+        : generateCurvedPolyline(startCoord, endCoord, -0.05));
+
+  const route3_Coords = (googleRoutes[2] && googleRoutes[2].coordinates.length > 2)
+    ? googleRoutes[2].coordinates
+    : generateCurvedPolyline(startCoord, endCoord, 0.08);
+
+  const route4_Coords = (googleRoutes[3] && googleRoutes[3].coordinates.length > 2)
+    ? googleRoutes[3].coordinates
+    : generateCurvedPolyline(startCoord, endCoord, -0.10);
+
+  const googleSteps1 = googleRoutes[0]?.steps && googleRoutes[0].steps.length > 0
+    ? googleRoutes[0].steps
+    : undefined;
 
   // Get real, location-specific route names and via descriptions
-  const routeNames = getDynamicRouteNames(originQuery, destQuery);
+  const routeNames = getDynamicRouteNames(originLoc.name, destLoc.name);
 
   return [
     {
@@ -425,7 +487,8 @@ export async function generateRealRoutes(originQuery: string, destQuery: string)
         { lat: route1_Coords[5][0], lng: route1_Coords[5][1], title: "24/7 Supermarket & Pharmacy", type: 'shop' },
         { lat: route1_Coords[10][0], lng: route1_Coords[10][1], title: "Main Street LED Lighting stretch", type: 'streetlight' },
         { lat: route1_Coords[15][0], lng: route1_Coords[15][1], title: "Police Assistance Booth", type: 'police' }
-      ]
+      ],
+      offlineSteps: googleSteps1
     },
     {
       id: "route-fastest",

@@ -1,8 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowUpDown, LocateFixed, Search, X, MapPin, Sparkles, Clock } from 'lucide-react';
+import { ArrowUpDown, LocateFixed, Search, X, MapPin, Sparkles, Clock, AlertCircle } from 'lucide-react';
 import { TimeOfDay } from '../types';
 import { searchLocations, GeocodingResult } from '../services/geocoding';
+import { 
+  getGooglePlacePredictions, 
+  getGooglePlaceDetails, 
+  geocodeGoogleAddress,
+  ensureGoogleMapsLoaded,
+  getApiKey,
+  GooglePlaceResult 
+} from '../services/googleMapsService';
 
 interface RouteSearchPageProps {
   onSearchComplete: (origin: string, destination: string) => void;
@@ -26,15 +34,17 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
   setTimeOfDay,
   isLowSignalGlobal = false
 }) => {
-  // Started empty by default as requested
   const [originTitle, setOriginTitle] = useState("");
   const [originAddress, setOriginAddress] = useState("");
-  
+  const [selectedOriginPlace, setSelectedOriginPlace] = useState<GooglePlaceResult | null>(null);
+
   const [destTitle, setDestTitle] = useState("");
   const [destAddress, setDestAddress] = useState("");
+  const [selectedDestPlace, setSelectedDestPlace] = useState<GooglePlaceResult | null>(null);
 
   const [isSearching, setIsSearching] = useState(false);
   const [isLocatingUser, setIsLocatingUser] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
 
   // Autocomplete suggestions
   const [originSuggestions, setOriginSuggestions] = useState<GeocodingResult[]>([]);
@@ -42,21 +52,46 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
   const [showOriginDropdown, setShowOriginDropdown] = useState(false);
   const [showDestDropdown, setShowDestDropdown] = useState(false);
 
+  // Pre-load Google Maps SDK on mount
+  useEffect(() => {
+    ensureGoogleMapsLoaded();
+  }, []);
+
   const handleSwap = () => {
     const tempT = originTitle;
     const tempA = originAddress;
+    const tempPlace = selectedOriginPlace;
+
     setOriginTitle(destTitle);
     setOriginAddress(destAddress);
+    setSelectedOriginPlace(selectedDestPlace);
+
     setDestTitle(tempT);
     setDestAddress(tempA);
+    setSelectedDestPlace(tempPlace);
   };
 
+  // Google Places Autocomplete predictions for FROM field
   useEffect(() => {
     const timer = setTimeout(async () => {
       if (showOriginDropdown) {
         if (originTitle.trim().length > 1) {
-          const results = await searchLocations(originTitle);
-          setOriginSuggestions(results);
+          const googlePreds = await getGooglePlacePredictions(originTitle);
+          if (googlePreds && googlePreds.length > 0) {
+            setOriginSuggestions(
+              googlePreds.map((gp) => ({
+                placeId: gp.placeId,
+                displayName: gp.description,
+                title: gp.mainText,
+                address: gp.secondaryText || gp.description,
+                lat: 0,
+                lng: 0
+              }))
+            );
+            return;
+          }
+          const fallbackResults = await searchLocations(originTitle);
+          setOriginSuggestions(fallbackResults);
         } else {
           setOriginSuggestions(POPULAR_SUGGESTIONS);
         }
@@ -67,12 +102,27 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
     return () => clearTimeout(timer);
   }, [originTitle, showOriginDropdown]);
 
+  // Google Places Autocomplete predictions for TO field
   useEffect(() => {
     const timer = setTimeout(async () => {
       if (showDestDropdown) {
         if (destTitle.trim().length > 1) {
-          const results = await searchLocations(destTitle);
-          setDestSuggestions(results);
+          const googlePreds = await getGooglePlacePredictions(destTitle);
+          if (googlePreds && googlePreds.length > 0) {
+            setDestSuggestions(
+              googlePreds.map((gp) => ({
+                placeId: gp.placeId,
+                displayName: gp.description,
+                title: gp.mainText,
+                address: gp.secondaryText || gp.description,
+                lat: 0,
+                lng: 0
+              }))
+            );
+            return;
+          }
+          const fallbackResults = await searchLocations(destTitle);
+          setDestSuggestions(fallbackResults);
         } else {
           setDestSuggestions(POPULAR_SUGGESTIONS);
         }
@@ -83,39 +133,164 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
     return () => clearTimeout(timer);
   }, [destTitle, showDestDropdown]);
 
-  const handleUseGpsLocation = () => {
-    if ('geolocation' in navigator) {
-      setIsLocatingUser(true);
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setOriginTitle("Current GPS Location");
-          setOriginAddress(`Lat: ${pos.coords.latitude.toFixed(4)}, Lng: ${pos.coords.longitude.toFixed(4)}`);
-          setIsLocatingUser(false);
-        },
-        (err) => {
-          console.warn('GPS location fetch error:', err);
-          setOriginTitle("Current Location");
-          setOriginAddress("Connaught Place, New Delhi");
-          setIsLocatingUser(false);
-        },
-        { enableHighAccuracy: true }
-      );
+  // Handle selecting an origin suggestion from Google Places
+  const handleSelectOriginSuggestion = async (item: GeocodingResult) => {
+    setOriginTitle(item.title);
+    setOriginAddress(item.address);
+    setShowOriginDropdown(false);
+    setSearchError(null);
+
+    if (item.placeId && !item.placeId.startsWith('p') && !item.placeId.includes('-')) {
+      const details = await getGooglePlaceDetails(item.placeId);
+      if (details) {
+        setSelectedOriginPlace(details);
+        setOriginAddress(details.address || item.address);
+        return;
+      }
+    }
+
+    if (item.lat && item.lng) {
+      setSelectedOriginPlace({
+        placeId: item.placeId,
+        name: item.title,
+        address: item.address,
+        displayName: item.displayName,
+        lat: item.lat,
+        lng: item.lng
+      });
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Handle selecting a destination suggestion from Google Places
+  const handleSelectDestSuggestion = async (item: GeocodingResult) => {
+    setDestTitle(item.title);
+    setDestAddress(item.address);
+    setShowDestDropdown(false);
+    setSearchError(null);
+
+    if (item.placeId && !item.placeId.startsWith('p') && !item.placeId.includes('-')) {
+      const details = await getGooglePlaceDetails(item.placeId);
+      if (details) {
+        setSelectedDestPlace(details);
+        setDestAddress(details.address || item.address);
+        return;
+      }
+    }
+
+    if (item.lat && item.lng) {
+      setSelectedDestPlace({
+        placeId: item.placeId,
+        name: item.title,
+        address: item.address,
+        displayName: item.displayName,
+        lat: item.lat,
+        lng: item.lng
+      });
+    }
+  };
+
+  const handleUseGpsLocation = () => {
+    if ('geolocation' in navigator) {
+      setIsLocatingUser(true);
+      setSearchError(null);
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+
+          const gpsPlace: GooglePlaceResult = {
+            placeId: 'gps-user-loc',
+            name: 'Current Location',
+            address: `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`,
+            displayName: `Current Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`,
+            lat,
+            lng
+          };
+
+          setSelectedOriginPlace(gpsPlace);
+          setOriginTitle("Current Location");
+          setOriginAddress(`Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`);
+          setIsLocatingUser(false);
+        },
+        (err) => {
+          console.warn('GPS location error:', err);
+          setIsLocatingUser(false);
+          setSearchError("Location permission was denied or is unavailable. Please type your origin in the search box.");
+        },
+        { enableHighAccuracy: true }
+      );
+    } else {
+      setSearchError("Geolocation is not supported by your browser.");
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const finalOrigin = originTitle.trim() || "Central Metro Station, New Delhi";
-    const finalDest = destTitle.trim() || "India Gate, New Delhi";
+    setSearchError(null);
+
+    if (!originTitle.trim() || !destTitle.trim()) {
+      setSearchError("Please specify both origin and destination locations.");
+      return;
+    }
 
     setIsSearching(true);
-    const fullOrigin = originAddress ? `${finalOrigin}, ${originAddress}` : finalOrigin;
-    const fullDest = destAddress ? `${finalDest}, ${destAddress}` : finalDest;
+
+    // Resolve origin place details if not already selected
+    let finalOriginObj = selectedOriginPlace;
+    if (!finalOriginObj || finalOriginObj.name !== originTitle) {
+      const geocoded = await geocodeGoogleAddress(originTitle + (originAddress ? `, ${originAddress}` : ''));
+      if (geocoded) {
+        finalOriginObj = geocoded;
+      } else {
+        const fallback = await searchLocations(originTitle);
+        if (fallback && fallback.length > 0) {
+          finalOriginObj = {
+            placeId: fallback[0].placeId,
+            name: fallback[0].title,
+            address: fallback[0].address,
+            displayName: fallback[0].displayName,
+            lat: fallback[0].lat,
+            lng: fallback[0].lng
+          };
+        }
+      }
+    }
+
+    // Resolve destination place details if not already selected
+    let finalDestObj = selectedDestPlace;
+    if (!finalDestObj || finalDestObj.name !== destTitle) {
+      const geocoded = await geocodeGoogleAddress(destTitle + (destAddress ? `, ${destAddress}` : ''));
+      if (geocoded) {
+        finalDestObj = geocoded;
+      } else {
+        const fallback = await searchLocations(destTitle);
+        if (fallback && fallback.length > 0) {
+          finalDestObj = {
+            placeId: fallback[0].placeId,
+            name: fallback[0].title,
+            address: fallback[0].address,
+            displayName: fallback[0].displayName,
+            lat: fallback[0].lat,
+            lng: fallback[0].lng
+          };
+        }
+      }
+    }
+
+    if (!finalOriginObj || !finalDestObj || (!finalOriginObj.lat && !finalOriginObj.address)) {
+      setIsSearching(false);
+      setSearchError("No precise location found. Please select a valid Google Place from suggestions.");
+      return;
+    }
+
+    // Embed exact Place ID and Coordinates in formatted location string
+    const fullOrigin = `${finalOriginObj.name} (${finalOriginObj.lat.toFixed(6)}, ${finalOriginObj.lng.toFixed(6)}) [placeId:${finalOriginObj.placeId}]`;
+    const fullDest = `${finalDestObj.name} (${finalDestObj.lat.toFixed(6)}, ${finalDestObj.lng.toFixed(6)}) [placeId:${finalDestObj.placeId}]`;
 
     setTimeout(() => {
       setIsSearching(false);
       onSearchComplete(fullOrigin, fullDest);
-    }, 1000);
+    }, 600);
   };
 
   return (
@@ -141,6 +316,13 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
               Search any place in India — a college, metro station, landmark, hospital or address.
             </p>
           </div>
+
+          {searchError && (
+            <div className="p-4 rounded-2xl text-xs font-semibold bg-rose-50 border border-rose-200 text-rose-800 flex items-center gap-2.5">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>{searchError}</span>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
             
@@ -190,11 +372,7 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
                     <button
                       key={item.placeId}
                       type="button"
-                      onClick={() => {
-                        setOriginTitle(item.title);
-                        setOriginAddress(item.address);
-                        setShowOriginDropdown(false);
-                      }}
+                      onClick={() => handleSelectOriginSuggestion(item)}
                       className="w-full text-left p-3 rounded-xl hover:bg-[#F9F4F0] text-xs space-y-0.5 border-b border-slate-50 last:border-0"
                     >
                       <div className="font-bold text-[#3E1627] flex items-center gap-1.5">
@@ -254,11 +432,7 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
                     <button
                       key={item.placeId}
                       type="button"
-                      onClick={() => {
-                        setDestTitle(item.title);
-                        setDestAddress(item.address);
-                        setShowDestDropdown(false);
-                      }}
+                      onClick={() => handleSelectDestSuggestion(item)}
                       className="w-full text-left p-3 rounded-xl hover:bg-[#F9F4F0] text-xs space-y-0.5 border-b border-slate-50 last:border-0"
                     >
                       <div className="font-bold text-[#3E1627] flex items-center gap-1.5">
