@@ -1,18 +1,33 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ShieldCheck, Eye, Lock, Sparkles, HeartHandshake, Database, CheckCircle2, XCircle, ArrowRight } from 'lucide-react';
+import { ShieldCheck, Eye, Lock, Sparkles, HeartHandshake, Database, CheckCircle2, XCircle, ArrowRight, ArrowLeft } from 'lucide-react';
 
 interface AboutPrivacyPageProps {
   onNavigateSearch: () => void;
+  onBack?: () => void;
   isLowSignalGlobal?: boolean;
 }
 
 export const AboutPrivacyPage: React.FC<AboutPrivacyPageProps> = ({
   onNavigateSearch,
+  onBack,
   isLowSignalGlobal = false
 }) => {
   return (
     <div className={`max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-16 space-y-12 ${isLowSignalGlobal ? 'text-slate-100' : ''}`}>
+      {onBack && (
+        <button
+          onClick={onBack}
+          className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all flex items-center gap-1.5 w-fit ${
+            isLowSignalGlobal
+              ? 'bg-slate-900 text-amber-300 border-slate-700 hover:bg-slate-800'
+              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 shadow-xs'
+          }`}
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>Back</span>
+        </button>
+      )}
       
       {/* Header Banner */}
       <div className="text-center space-y-4">

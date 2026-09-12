@@ -26,6 +26,7 @@ export function App() {
     const interval = setInterval(updateTime, 30000);
     return () => clearInterval(interval);
   }, []);
+
   const [userProfile, setUserProfile] = useState<UserProfile>(INITIAL_USER_PROFILE);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isLowSignalGlobal, setIsLowSignalGlobal] = useState(false);
@@ -39,6 +40,63 @@ export function App() {
 
   // Community Notes Feed State
   const [communityNotes, setCommunityNotes] = useState<CommunityNote[]>(INITIAL_COMMUNITY_NOTES);
+
+  // Browser History Navigation Manager
+  const changePage = (newPage: PageType, replace = false) => {
+    if (newPage === activePage) return;
+    if (!replace) {
+      window.history.pushState({ page: newPage }, '', `#${newPage}`);
+    } else {
+      window.history.replaceState({ page: newPage }, '', `#${newPage}`);
+    }
+    setActivePage(newPage);
+  };
+
+  const handleGoBack = () => {
+    if (window.history.state && window.history.state.page && window.history.length > 1) {
+      window.history.back();
+    } else {
+      // Fallback hierarchy
+      switch (activePage) {
+        case 'results':
+          changePage('search', true);
+          break;
+        case 'share':
+        case 'journey':
+          changePage('results', true);
+          break;
+        case 'search':
+        case 'community':
+        case 'about':
+        case 'lowsignal':
+        default:
+          changePage('home', true);
+          break;
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (!window.history.state) {
+      window.history.replaceState({ page: 'home' }, '', '#home');
+    }
+
+    const handlePopState = (event: PopStateEvent) => {
+      if (event.state && event.state.page) {
+        setActivePage(event.state.page);
+      } else {
+        const hashPage = window.location.hash.replace('#', '') as PageType;
+        if (['home', 'search', 'results', 'share', 'journey', 'community', 'about', 'lowsignal'].includes(hashPage)) {
+          setActivePage(hashPage);
+        } else {
+          setActivePage('home');
+        }
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Recalculate routes dynamically whenever timeOfDay or base routes change
   const timeEvaluatedRoutes = recalculateRouteScoresForTime(routes, timeOfDay);
@@ -55,17 +113,17 @@ export function App() {
     if (scored.length > 0) {
       setSelectedRouteId(scored[0].id);
     }
-    setActivePage('results');
+    changePage('results');
   };
 
   const handleSelectAndShare = (route: RouteOption) => {
     setSelectedRouteId(route.id);
-    setActivePage('share');
+    changePage('share');
   };
 
   const handleProceedOnly = (route: RouteOption) => {
     setSelectedRouteId(route.id);
-    setActivePage('journey');
+    changePage('journey');
   };
 
   const handleAddCommunityNote = (newNote: CommunityNote) => {
@@ -80,7 +138,7 @@ export function App() {
       {/* Persistent Navigation Header with Pinned SOS & Global Low Signal Toggle */}
       <Navbar
         activePage={activePage}
-        setActivePage={setActivePage}
+        setActivePage={(p) => changePage(p)}
         timeOfDay={timeOfDay}
         setTimeOfDay={setTimeOfDay}
         userProfile={userProfile}
@@ -102,8 +160,8 @@ export function App() {
           >
             {activePage === 'home' && (
               <HomePage
-                onNavigateToSearch={() => setActivePage('search')}
-                onNavigateToAbout={() => setActivePage('about')}
+                onNavigateToSearch={() => changePage('search')}
+                onNavigateToAbout={() => changePage('about')}
                 userProfile={userProfile}
                 setUserProfile={setUserProfile}
                 isLowSignalGlobal={isLowSignalGlobal}
@@ -115,6 +173,7 @@ export function App() {
             {activePage === 'search' && (
               <RouteSearchPage
                 onSearchComplete={handleSearchComplete}
+                onBack={handleGoBack}
                 timeOfDay={timeOfDay}
                 setTimeOfDay={setTimeOfDay}
                 isLowSignalGlobal={isLowSignalGlobal}
@@ -130,13 +189,13 @@ export function App() {
                 setSelectedRouteId={setSelectedRouteId}
                 onSelectAndShare={handleSelectAndShare}
                 onProceedOnly={handleProceedOnly}
-                onBackToSearch={() => setActivePage('search')}
+                onBackToSearch={handleGoBack}
                 timeOfDay={timeOfDay}
                 setTimeOfDay={setTimeOfDay}
                 isLowSignalGlobal={isLowSignalGlobal}
                 onNavigateToLowSignal={() => {
                   setIsLowSignalGlobal(true);
-                  setActivePage('lowsignal');
+                  changePage('lowsignal');
                 }}
               />
             )}
@@ -144,8 +203,9 @@ export function App() {
             {activePage === 'share' && (
               <ShareJourneyPage
                 selectedRoute={selectedRoute}
-                onNavigateHome={() => setActivePage('home')}
-                onStartJourney={() => setActivePage('journey')}
+                onNavigateHome={() => changePage('home')}
+                onStartJourney={() => changePage('journey')}
+                onBack={handleGoBack}
                 isLowSignalGlobal={isLowSignalGlobal}
               />
             )}
@@ -155,8 +215,8 @@ export function App() {
                 selectedRoute={selectedRoute}
                 origin={origin || "Selected Origin"}
                 destination={destination || "Selected Destination"}
-                onEndJourney={() => setActivePage('results')}
-                onNavigateHome={() => setActivePage('home')}
+                onEndJourney={handleGoBack}
+                onNavigateHome={() => changePage('home')}
                 isLowSignalGlobal={isLowSignalGlobal}
                 timeOfDay={timeOfDay}
               />
@@ -166,13 +226,15 @@ export function App() {
               <CommunityNotesPage
                 notes={communityNotes}
                 onAddNote={handleAddCommunityNote}
+                onBack={handleGoBack}
                 isLowSignalGlobal={isLowSignalGlobal}
               />
             )}
 
             {activePage === 'about' && (
               <AboutPrivacyPage
-                onNavigateSearch={() => setActivePage('search')}
+                onNavigateSearch={() => changePage('search')}
+                onBack={handleGoBack}
                 isLowSignalGlobal={isLowSignalGlobal}
               />
             )}
@@ -180,7 +242,11 @@ export function App() {
             {activePage === 'lowsignal' && (
               <LowSignalPage
                 selectedRoute={selectedRoute}
-                onExitLowSignal={() => setIsLowSignalGlobal(false)}
+                onExitLowSignal={() => {
+                  setIsLowSignalGlobal(false);
+                  handleGoBack();
+                }}
+                onBack={handleGoBack}
                 origin={origin || "IGDTUW Campus, Kashmiri Gate, Delhi"}
                 destination={destination || "India Gate, New Delhi"}
               />

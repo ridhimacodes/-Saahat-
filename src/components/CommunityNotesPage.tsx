@@ -1,17 +1,19 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, Plus, ThumbsUp, Camera, CheckCircle2, Image as ImageIcon, MapPin, Tag, Sparkles, Filter, X } from 'lucide-react';
+import { MessageSquare, Plus, ThumbsUp, Camera, CheckCircle2, Image as ImageIcon, MapPin, Tag, Sparkles, Filter, X, ArrowLeft } from 'lucide-react';
 import { CommunityNote } from '../types';
 
 interface CommunityNotesPageProps {
   notes: CommunityNote[];
   onAddNote: (newNote: CommunityNote) => void;
+  onBack?: () => void;
   isLowSignalGlobal?: boolean;
 }
 
 export const CommunityNotesPage: React.FC<CommunityNotesPageProps> = ({
   notes,
   onAddNote,
+  onBack,
   isLowSignalGlobal = false
 }) => {
   const [activeCategory, setActiveCategory] = useState<string>("All");
@@ -79,7 +81,20 @@ export const CommunityNotesPage: React.FC<CommunityNotesPageProps> = ({
 
   return (
     <div className={`max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-8 ${isLowSignalGlobal ? 'text-slate-100' : ''}`}>
-      
+      {onBack && (
+        <button
+          onClick={onBack}
+          className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all flex items-center gap-1.5 w-fit ${
+            isLowSignalGlobal
+              ? 'bg-slate-900 text-amber-300 border-slate-700 hover:bg-slate-800'
+              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 shadow-xs'
+          }`}
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>Back</span>
+        </button>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>

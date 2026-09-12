@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowUpDown, LocateFixed, Search, X, MapPin, Sparkles, Clock, AlertCircle, Sun, Sunset, Moon } from 'lucide-react';
+import { ArrowUpDown, LocateFixed, Search, X, MapPin, Sparkles, Clock, AlertCircle, Sun, Sunset, Moon, ArrowLeft } from 'lucide-react';
 import { TimeOfDay } from '../types';
 import { searchLocations, GeocodingResult } from '../services/geocoding';
 import { 
@@ -14,6 +14,7 @@ import {
 
 interface RouteSearchPageProps {
   onSearchComplete: (origin: string, destination: string) => void;
+  onBack?: () => void;
   timeOfDay: TimeOfDay;
   setTimeOfDay: (time: TimeOfDay) => void;
   isLowSignalGlobal?: boolean;
@@ -30,6 +31,7 @@ const POPULAR_SUGGESTIONS: GeocodingResult[] = [
 
 export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
   onSearchComplete,
+  onBack,
   timeOfDay,
   setTimeOfDay,
   isLowSignalGlobal = false
@@ -308,7 +310,20 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
           }`}
         >
           {/* Card Title & Subtitle Header */}
-          <div className="space-y-1">
+          <div className="space-y-2">
+            {onBack && (
+              <button
+                onClick={onBack}
+                className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all flex items-center gap-1.5 w-fit ${
+                  isLowSignalGlobal
+                    ? 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-slate-700'
+                    : 'bg-purple-50 hover:bg-purple-100 text-purple-900 border-purple-200'
+                }`}
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Back</span>
+              </button>
+            )}
             <h1 className={`font-serif font-bold text-3xl sm:text-4xl tracking-tight ${isLowSignalGlobal ? 'text-white' : 'text-[#3E1627]'}`}>
               Plan my journey
             </h1>

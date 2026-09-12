@@ -33,6 +33,7 @@ import {
 interface LowSignalPageProps {
   selectedRoute: RouteOption;
   onExitLowSignal: () => void;
+  onBack?: () => void;
   origin?: string;
   destination?: string;
 }
@@ -40,6 +41,7 @@ interface LowSignalPageProps {
 export const LowSignalPage: React.FC<LowSignalPageProps> = ({
   selectedRoute,
   onExitLowSignal,
+  onBack,
   origin = 'IGDTUW Campus, Kashmiri Gate, Delhi',
   destination = 'India Gate, New Delhi'
 }) => {
@@ -134,11 +136,11 @@ export const LowSignalPage: React.FC<LowSignalPageProps> = ({
           </div>
 
           <button
-            onClick={onExitLowSignal}
+            onClick={onBack || onExitLowSignal}
             className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold flex items-center gap-2 transition-all shrink-0"
           >
             <ArrowLeft className="w-4 h-4 text-amber-400" />
-            <span>Switch to Standard UI</span>
+            <span>Back to Previous Page</span>
           </button>
         </div>
 

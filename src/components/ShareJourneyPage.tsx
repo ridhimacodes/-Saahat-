@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
-import { ShieldCheck, UserCheck, Clock, CheckCircle2, Send, Lock, Sparkles, Heart, Copy, Check } from 'lucide-react';
+import { ShieldCheck, UserCheck, Clock, CheckCircle2, Send, Lock, Sparkles, Heart, Copy, Check, ArrowLeft } from 'lucide-react';
 import { RouteOption, TrustedContact } from '../types';
 import { TRUSTED_CONTACTS } from '../data/mockData';
 
@@ -9,6 +9,7 @@ interface ShareJourneyPageProps {
   selectedRoute: RouteOption;
   onNavigateHome: () => void;
   onStartJourney?: () => void;
+  onBack?: () => void;
   isLowSignalGlobal?: boolean;
 }
 
@@ -16,6 +17,7 @@ export const ShareJourneyPage: React.FC<ShareJourneyPageProps> = ({
   selectedRoute,
   onNavigateHome,
   onStartJourney,
+  onBack,
   isLowSignalGlobal = false
 }) => {
   const [selectedContact, setSelectedContact] = useState<TrustedContact>(TRUSTED_CONTACTS[0]);
@@ -57,7 +59,20 @@ export const ShareJourneyPage: React.FC<ShareJourneyPageProps> = ({
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-8">
-      
+      {onBack && (
+        <button
+          onClick={onBack}
+          className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all flex items-center gap-1.5 ${
+            isLowSignalGlobal
+              ? 'bg-slate-900 text-amber-300 border-slate-700 hover:bg-slate-800'
+              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 shadow-xs'
+          }`}
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>Back</span>
+        </button>
+      )}
+
       {/* Page Header */}
       <div className="text-center">
         <motion.div
