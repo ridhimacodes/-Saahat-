@@ -147,11 +147,11 @@ export const SOSModal: React.FC<SOSModalProps> = ({
 
                     <div className="pt-1">
                       <button
-                        onClick={() => triggerCallSimulation("Police Station (911/112)")}
+                        onClick={() => triggerCallSimulation("Police Control Room (100 / 112)")}
                         className="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-all"
                       >
                         <PhoneCall className="w-4 h-4" />
-                        <span>Direct Call Police Dispatch (911 / 112)</span>
+                        <span>Direct Call Police Control Room (100 / 112)</span>
                       </button>
                     </div>
                   </div>

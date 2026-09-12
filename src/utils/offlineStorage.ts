@@ -27,9 +27,9 @@ export const saveJourneyLocally = (
       `Arrive at ${destination}`
     ],
     helpPoints: [
-      { name: 'Sector 15 Main Police Station', type: 'Police', phone: '911', distance: '0.8 km' },
-      { name: 'St. Jude Community Hospital', type: 'Hospital', phone: '+1 (555) 911-0000', distance: '1.1 km' },
-      { name: '24/7 Apex Supermarket', type: '24/7 Store', phone: '+1 (555) 432-1000', distance: '0.3 km' }
+      { name: 'Sector 15 Main Police Station', type: 'Police', phone: '100 / 112', distance: '0.8 km' },
+      { name: 'St. Jude Community Hospital', type: 'Hospital', phone: '+91 11 2305 1200', distance: '1.1 km' },
+      { name: '24/7 Apex Supermarket', type: '24/7 Store', phone: '+91 98200 43210', distance: '0.3 km' }
     ]
   };
 

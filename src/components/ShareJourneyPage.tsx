@@ -30,7 +30,7 @@ export const ShareJourneyPage: React.FC<ShareJourneyPageProps> = ({
   const [hasArrivedSafely, setHasArrivedSafely] = useState(false);
 
   const contactName = useCustomContact ? (customName || "Trusted Contact") : selectedContact.name;
-  const contactPhone = useCustomContact ? (customPhone || "+1 (555) 000-0000") : selectedContact.phone;
+  const contactPhone = useCustomContact ? (customPhone || "+91 98765 43210") : selectedContact.phone;
 
   const generatedMessage = `I'm heading home via ${selectedRoute.name.split('—')[0].trim()} (${selectedRoute.durationMinutes} mins), expected arrival by ${arrivalTime}. Powered by SAHAAT.`;
 

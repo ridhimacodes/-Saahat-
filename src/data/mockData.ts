@@ -28,10 +28,10 @@ export const POPULAR_LOCATIONS = [
 ];
 
 export const TRUSTED_CONTACTS: TrustedContact[] = [
-  { id: '1', name: 'Mom (Anjali)', phone: '+1 (555) 234-5678', relationship: 'Family', avatarBg: 'bg-purple-500' },
-  { id: '2', name: 'Sara (Roommate)', phone: '+1 (555) 987-6543', relationship: 'Roommate', avatarBg: 'bg-pink-500' },
-  { id: '3', name: 'Priya (Sister)', phone: '+1 (555) 456-7890', relationship: 'Family', avatarBg: 'bg-teal-500' },
-  { id: '4', name: 'Elena (Colleague)', phone: '+1 (555) 321-7654', relationship: 'Friend', avatarBg: 'bg-amber-500' },
+  { id: '1', name: 'Mom (Anjali)', phone: '+91 98765 43210', relationship: 'Family', avatarBg: 'bg-purple-500' },
+  { id: '2', name: 'Sara (Roommate)', phone: '+91 98123 45678', relationship: 'Roommate', avatarBg: 'bg-pink-500' },
+  { id: '3', name: 'Priya (Sister)', phone: '+91 97654 32109', relationship: 'Family', avatarBg: 'bg-teal-500' },
+  { id: '4', name: 'Elena (Colleague)', phone: '+91 99887 76655', relationship: 'Friend', avatarBg: 'bg-amber-500' },
 ];
 
 export const OFFLINE_HELP_POINTS: OfflineHelpPoint[] = [
@@ -41,7 +41,7 @@ export const OFFLINE_HELP_POINTS: OfflineHelpPoint[] = [
     type: 'Police',
     distance: '0.8 km away',
     address: '102 Civil Lines, Sector 15',
-    phone: '911 / 112',
+    phone: '100 / 112',
     open247: true
   },
   {
@@ -50,7 +50,7 @@ export const OFFLINE_HELP_POINTS: OfflineHelpPoint[] = [
     type: 'Hospital',
     distance: '1.1 km away',
     address: '45 Health Avenue',
-    phone: '+1 (555) 911-0000',
+    phone: '+91 11 2305 1200',
     open247: true
   },
   {
@@ -59,7 +59,7 @@ export const OFFLINE_HELP_POINTS: OfflineHelpPoint[] = [
     type: '24/7 Store',
     distance: '0.3 km away',
     address: 'Commercial Hub Exit 3',
-    phone: '+1 (555) 432-1000',
+    phone: '+91 98200 43210',
     open247: true
   },
   {
@@ -68,7 +68,7 @@ export const OFFLINE_HELP_POINTS: OfflineHelpPoint[] = [
     type: 'Transit Station',
     distance: '0.4 km away',
     address: 'Underground Concourse Gate 1',
-    phone: '+1 (555) 888-2200',
+    phone: '+91 11 2341 7910',
     open247: true
   }
 ];
