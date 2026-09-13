@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowUpDown, LocateFixed, Search, X, MapPin, Sparkles, Clock, AlertCircle, Sun, Sunset, Moon, ArrowLeft } from 'lucide-react';
 import { TimeOfDay } from '../types';
@@ -48,15 +48,51 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
   const [isLocatingUser, setIsLocatingUser] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
 
+  // Container refs for detecting clicks outside
+  const originContainerRef = useRef<HTMLDivElement>(null);
+  const destContainerRef = useRef<HTMLDivElement>(null);
+
   // Autocomplete suggestions
   const [originSuggestions, setOriginSuggestions] = useState<GeocodingResult[]>([]);
   const [destSuggestions, setDestSuggestions] = useState<GeocodingResult[]>([]);
   const [showOriginDropdown, setShowOriginDropdown] = useState(false);
   const [showDestDropdown, setShowDestDropdown] = useState(false);
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
 
-  // Pre-load Google Maps SDK on mount
+  // Close suggestions on clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (originContainerRef.current && !originContainerRef.current.contains(event.target as Node)) {
+        setShowOriginDropdown(false);
+      }
+      if (destContainerRef.current && !destContainerRef.current.contains(event.target as Node)) {
+        setShowDestDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Pre-load Google Maps SDK & get user geolocation on mount
   useEffect(() => {
     ensureGoogleMapsLoaded();
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setUserCoords({
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude
+          });
+        },
+        (err) => {
+          console.log('User location access for search bias:', err);
+        },
+        { timeout: 8000, maximumAge: 300000 }
+      );
+    }
   }, []);
 
   const handleSwap = () => {
@@ -77,8 +113,8 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
   useEffect(() => {
     const timer = setTimeout(async () => {
       if (showOriginDropdown) {
-        if (originTitle.trim().length > 1) {
-          const googlePreds = await getGooglePlacePredictions(originTitle);
+        if (originTitle.trim().length >= 1) {
+          const googlePreds = await getGooglePlacePredictions(originTitle, userCoords || undefined);
           if (googlePreds && googlePreds.length > 0) {
             setOriginSuggestions(
               googlePreds.map((gp) => ({
@@ -100,16 +136,16 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
       } else {
         setOriginSuggestions([]);
       }
-    }, 250);
+    }, 200);
     return () => clearTimeout(timer);
-  }, [originTitle, showOriginDropdown]);
+  }, [originTitle, showOriginDropdown, userCoords]);
 
   // Google Places Autocomplete predictions for TO field
   useEffect(() => {
     const timer = setTimeout(async () => {
       if (showDestDropdown) {
-        if (destTitle.trim().length > 1) {
-          const googlePreds = await getGooglePlacePredictions(destTitle);
+        if (destTitle.trim().length >= 1) {
+          const googlePreds = await getGooglePlacePredictions(destTitle, userCoords || undefined);
           if (googlePreds && googlePreds.length > 0) {
             setDestSuggestions(
               googlePreds.map((gp) => ({
@@ -131,9 +167,9 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
       } else {
         setDestSuggestions([]);
       }
-    }, 250);
+    }, 200);
     return () => clearTimeout(timer);
-  }, [destTitle, showDestDropdown]);
+  }, [destTitle, showDestDropdown, userCoords]);
 
   // Handle selecting an origin suggestion from Google Places
   const handleSelectOriginSuggestion = async (item: GeocodingResult) => {
@@ -240,7 +276,7 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
     // Resolve origin place details if not already selected
     let finalOriginObj = selectedOriginPlace;
     if (!finalOriginObj || finalOriginObj.name !== originTitle) {
-      const geocoded = await geocodeGoogleAddress(originTitle + (originAddress ? `, ${originAddress}` : ''));
+      const geocoded = await geocodeGoogleAddress(originTitle + (originAddress ? `, ${originAddress}` : ''), userCoords || undefined);
       if (geocoded) {
         finalOriginObj = geocoded;
       } else {
@@ -261,7 +297,7 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
     // Resolve destination place details if not already selected
     let finalDestObj = selectedDestPlace;
     if (!finalDestObj || finalDestObj.name !== destTitle) {
-      const geocoded = await geocodeGoogleAddress(destTitle + (destAddress ? `, ${destAddress}` : ''));
+      const geocoded = await geocodeGoogleAddress(destTitle + (destAddress ? `, ${destAddress}` : ''), userCoords || undefined);
       if (geocoded) {
         finalDestObj = geocoded;
       } else {
@@ -342,12 +378,12 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
           <form onSubmit={handleSubmit} className="space-y-5">
             
             {/* FROM Input Box */}
-            <div className="relative z-30 space-y-1.5">
+            <div ref={originContainerRef} className="relative z-30 space-y-1.5">
               <label className="block text-xs font-bold tracking-widest text-[#7E5767] uppercase ml-1">
                 FROM
               </label>
-              <div className="bg-white rounded-3xl border border-[#E0D0C9] p-3.5 sm:p-4 flex items-start justify-between gap-3 shadow-xs hover:border-[#A3526B] transition-colors focus-within:ring-2 focus-within:ring-[#A3526B]/20">
-                <div className="w-3 h-3 rounded-full bg-[#C2414C] mt-2 flex-shrink-0"></div>
+              <div className="bg-white rounded-3xl border border-[#E0D0C9] p-3.5 sm:p-4 flex items-center justify-between gap-3 shadow-xs hover:border-[#A3526B] transition-colors focus-within:ring-2 focus-within:ring-[#A3526B]/20">
+                <div className="w-3 h-3 rounded-full bg-[#C2414C] flex-shrink-0"></div>
                 <div className="flex-1 space-y-0.5">
                   <input
                     type="text"
@@ -361,18 +397,14 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
                     required
                     className="w-full font-bold text-base text-[#3E1627] bg-transparent outline-none border-none p-0"
                   />
-                  <input
-                    type="text"
-                    value={originAddress}
-                    onChange={(e) => setOriginAddress(e.target.value)}
-                    placeholder="Full address details..."
-                    className="w-full text-xs text-[#7E5767] bg-transparent outline-none border-none p-0 truncate font-medium"
-                  />
+                  {originAddress && (
+                    <div className="text-xs text-[#7E5767] truncate font-medium">{originAddress}</div>
+                  )}
                 </div>
                 {originTitle && (
                   <button
                     type="button"
-                    onClick={() => { setOriginTitle(''); setOriginAddress(''); }}
+                    onClick={() => { setOriginTitle(''); setOriginAddress(''); setSelectedOriginPlace(null); }}
                     className="text-slate-400 hover:text-slate-700 p-1"
                   >
                     <X className="w-4 h-4" />
@@ -391,8 +423,8 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
                       className="w-full text-left p-3 rounded-xl hover:bg-[#F9F4F0] text-xs space-y-0.5 border-b border-slate-50 last:border-0"
                     >
                       <div className="font-bold text-[#3E1627] flex items-center gap-1.5">
-                        <MapPin className="w-3.5 h-3.5 text-[#C2414C]" />
-                        <span>{item.title}</span>
+                        <MapPin className="w-3.5 h-3.5 text-[#C2414C] shrink-0" />
+                        <span className="truncate">{item.title}</span>
                       </div>
                       <div className="text-[#7E5767] text-[11px] truncate pl-5">{item.address}</div>
                     </button>
@@ -402,12 +434,12 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
             </div>
 
             {/* TO Input Box */}
-            <div className="relative z-20 space-y-1.5">
+            <div ref={destContainerRef} className="relative z-20 space-y-1.5">
               <label className="block text-xs font-bold tracking-widest text-[#7E5767] uppercase ml-1">
                 TO
               </label>
-              <div className="bg-white rounded-3xl border border-[#E0D0C9] p-3.5 sm:p-4 flex items-start justify-between gap-3 shadow-xs hover:border-[#A3526B] transition-colors focus-within:ring-2 focus-within:ring-[#A3526B]/20">
-                <div className="w-3 h-3 rounded-full bg-[#1E6B45] mt-2 flex-shrink-0"></div>
+              <div className="bg-white rounded-3xl border border-[#E0D0C9] p-3.5 sm:p-4 flex items-center justify-between gap-3 shadow-xs hover:border-[#A3526B] transition-colors focus-within:ring-2 focus-within:ring-[#A3526B]/20">
+                <div className="w-3 h-3 rounded-full bg-[#1E6B45] flex-shrink-0"></div>
                 <div className="flex-1 space-y-0.5">
                   <input
                     type="text"
@@ -421,18 +453,14 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
                     required
                     className="w-full font-bold text-base text-[#3E1627] bg-transparent outline-none border-none p-0"
                   />
-                  <input
-                    type="text"
-                    value={destAddress}
-                    onChange={(e) => setDestAddress(e.target.value)}
-                    placeholder="Full address details..."
-                    className="w-full text-xs text-[#7E5767] bg-transparent outline-none border-none p-0 truncate font-medium"
-                  />
+                  {destAddress && (
+                    <div className="text-xs text-[#7E5767] truncate font-medium">{destAddress}</div>
+                  )}
                 </div>
                 {destTitle && (
                   <button
                     type="button"
-                    onClick={() => { setDestTitle(''); setDestAddress(''); }}
+                    onClick={() => { setDestTitle(''); setDestAddress(''); setSelectedDestPlace(null); }}
                     className="text-slate-400 hover:text-slate-700 p-1"
                   >
                     <X className="w-4 h-4" />

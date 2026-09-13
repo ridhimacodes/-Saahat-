@@ -44,8 +44,11 @@ export function ensureGoogleMapsLoaded(): Promise<boolean> {
 /**
  * Fetch real-time place predictions using Google Places AutocompleteService
  */
-export async function getGooglePlacePredictions(input: string): Promise<GooglePlacePrediction[]> {
-  if (!input || input.trim().length < 2) return [];
+export async function getGooglePlacePredictions(
+  input: string,
+  userLocation?: { lat: number; lng: number }
+): Promise<GooglePlacePrediction[]> {
+  if (!input || input.trim().length < 1) return [];
 
   const loaded = await ensureGoogleMapsLoaded();
   const win = window as any;
@@ -58,10 +61,23 @@ export async function getGooglePlacePredictions(input: string): Promise<GooglePl
   return new Promise((resolve) => {
     try {
       const autocompleteService = new win.google.maps.places.AutocompleteService();
+      
+      const request: any = {
+        input: input.trim(),
+        componentRestrictions: { country: 'in' }
+      };
+
+      if (userLocation && typeof userLocation.lat === 'number' && typeof userLocation.lng === 'number') {
+        request.location = new win.google.maps.LatLng(userLocation.lat, userLocation.lng);
+        request.radius = 50000; // 50km radius bias around user location
+      } else {
+        // Default location bias to Delhi / Central India
+        request.location = new win.google.maps.LatLng(28.6139, 77.2090);
+        request.radius = 500000; // 500km radius bias
+      }
+
       autocompleteService.getPlacePredictions(
-        {
-          input: input.trim(),
-        },
+        request,
         (predictions: any[], status: any) => {
           if (status === win.google.maps.places.PlacesServiceStatus.OK && predictions && predictions.length > 0) {
             const formatted = predictions.map((p) => ({
@@ -133,7 +149,10 @@ export async function getGooglePlaceDetails(placeId: string): Promise<GooglePlac
 /**
  * Geocode text address using Google Geocoder Service
  */
-export async function geocodeGoogleAddress(address: string): Promise<GooglePlaceResult | null> {
+export async function geocodeGoogleAddress(
+  address: string,
+  userLocation?: { lat: number; lng: number }
+): Promise<GooglePlaceResult | null> {
   if (!address || !address.trim()) return null;
 
   const loaded = await ensureGoogleMapsLoaded();
@@ -146,7 +165,16 @@ export async function geocodeGoogleAddress(address: string): Promise<GooglePlace
   return new Promise((resolve) => {
     try {
       const geocoder = new win.google.maps.Geocoder();
-      geocoder.geocode({ address: address.trim() }, (results: any[], status: any) => {
+      const req: any = {
+        address: address.trim(),
+        componentRestrictions: { country: 'IN' }
+      };
+
+      if (userLocation && typeof userLocation.lat === 'number' && typeof userLocation.lng === 'number') {
+        req.location = new win.google.maps.LatLng(userLocation.lat, userLocation.lng);
+      }
+
+      geocoder.geocode(req, (results: any[], status: any) => {
         if (status === win.google.maps.GeocoderStatus.OK && results && results[0]) {
           const res = results[0];
           const lat = res.geometry.location.lat();
