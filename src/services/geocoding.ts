@@ -41,6 +41,9 @@ const FAMOUS_INDIAN_PLACES: Record<string, GeocodingResult> = {
   "indira gandhi international airport t3": { placeId: "del-t3", displayName: "Terminal 3, Indira Gandhi International Airport (DEL), New Delhi", title: "IGI Airport Terminal 3 (T3)", address: "Terminal 3, IGI Airport, New Delhi, Delhi 110037, India", lat: 28.5562, lng: 77.1000 },
   "igi airport t3": { placeId: "del-t3", displayName: "Terminal 3, Indira Gandhi International Airport (DEL), New Delhi", title: "IGI Airport Terminal 3 (T3)", address: "Terminal 3, IGI Airport, New Delhi, Delhi 110037, India", lat: 28.5562, lng: 77.1000 },
   "t3 airport": { placeId: "del-t3", displayName: "Terminal 3, Indira Gandhi International Airport (DEL), New Delhi", title: "IGI Airport Terminal 3 (T3)", address: "Terminal 3, IGI Airport, New Delhi, Delhi 110037, India", lat: 28.5562, lng: 77.1000 },
+  "noida stadium": { placeId: "noida-stadium-1", displayName: "Noida Stadium, Ramnath Goenka Marg, Sector 21A, Noida", title: "Noida Stadium", address: "Sector 21A, Noida, Gautam Buddha Nagar, Uttar Pradesh 201301, India", lat: 28.5908, lng: 77.3373 },
+  "alliance world school": { placeId: "alliance-world-school-1", displayName: "Alliance World School, Sector 56, Noida", title: "Alliance World School", address: "C-54A, Sector 56, Noida, Gautam Buddha Nagar, Uttar Pradesh 201301, India", lat: 28.6042, lng: 77.3458 },
+  "alliance world": { placeId: "alliance-world-school-1", displayName: "Alliance World School, Sector 56, Noida", title: "Alliance World School", address: "C-54A, Sector 56, Noida, Gautam Buddha Nagar, Uttar Pradesh 201301, India", lat: 28.6042, lng: 77.3458 },
   "sector 15": { placeId: "sec-15-noida", displayName: "Sector 15, Noida, Uttar Pradesh", title: "Sector 15, Noida", address: "Sector 15, Noida, Uttar Pradesh 201301, India", lat: 28.5833, lng: 77.3167 },
   "sector 15 noida": { placeId: "sec-15-noida", displayName: "Sector 15, Noida, Uttar Pradesh", title: "Sector 15, Noida", address: "Sector 15, Noida, Uttar Pradesh 201301, India", lat: 28.5833, lng: 77.3167 },
   "sector 15 gurgaon": { placeId: "sec-15-ggn", displayName: "Sector 15, Gurugram, Haryana", title: "Sector 15, Gurugram", address: "Sector 15 Part 1, Gurugram, Haryana 122001, India", lat: 28.4682, lng: 77.0378 },
@@ -72,58 +75,105 @@ const FAMOUS_INDIAN_PLACES: Record<string, GeocodingResult> = {
 export async function searchLocations(query: string): Promise<GeocodingResult[]> {
   if (!query || query.trim().length < 2) return [];
   const cleanQuery = query.trim().toLowerCase().replace(/[,.-]/g, ' ');
-  const queryTokens = cleanQuery.split(/\s+/).filter(t => t.length > 1);
 
-  // Check Indian landmarks dictionary first for immediate exact or fuzzy match
+  // 1. First, search live OpenStreetMap (Nominatim) for exact places, schools, stadiums, landmarks, roads, and sectors
+  try {
+    const fetchOSM = async (searchQ: string) => {
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQ)}&countrycodes=in&limit=6&addressdetails=1`;
+      const response = await fetch(url, {
+        headers: {
+          'Accept-Language': 'en',
+          'User-Agent': 'SaahatApp/1.0 (contact@saahat.app)'
+        }
+      });
+      if (!response.ok) return [];
+      return await response.json();
+    };
+
+    let data = await fetchOSM(query);
+
+    // If query has specific words or commas that might be too strict, try relaxed variations
+    if (!data || data.length === 0) {
+      // Try with ', India'
+      data = await fetchOSM(query + ', India');
+    }
+
+    // Try subparts if commas exist (e.g. "Alliance World School, Sector 56, Noida" -> "Sector 56, Noida")
+    if (!data || data.length === 0) {
+      const commaParts = query.split(',').map(s => s.trim()).filter(Boolean);
+      if (commaParts.length > 1) {
+        for (let i = 1; i < commaParts.length; i++) {
+          const sub = commaParts.slice(i).join(', ');
+          data = await fetchOSM(sub);
+          if (data && data.length > 0) break;
+        }
+      }
+    }
+
+    // Try removing organizational/suffix words from end if nothing matched
+    if (!data || data.length === 0) {
+      const words = query.trim().split(/\s+/).filter(Boolean);
+      if (words.length > 2) {
+        for (let i = words.length - 1; i >= 2; i--) {
+          const sub = words.slice(0, i).join(' ');
+          data = await fetchOSM(sub);
+          if (data && data.length > 0) break;
+        }
+      }
+    }
+
+    if (data && data.length > 0) {
+      return data.map((item: any) => {
+        const parts = item.display_name.split(',');
+        const title = parts[0]?.trim() || item.name || query;
+        const address = parts.slice(1).join(',').trim() || item.display_name;
+
+        return {
+          placeId: item.place_id.toString(),
+          displayName: item.display_name,
+          title,
+          address,
+          lat: parseFloat(item.lat),
+          lng: parseFloat(item.lon)
+        };
+      });
+    }
+  } catch (error) {
+    console.error('Geocoding live search failed, falling back to local database:', error);
+  }
+
+  // 2. Check local Indian landmarks dictionary for exact or token matches
   const matches: GeocodingResult[] = [];
   const addedIds = new Set<string>();
+  const queryTokens = cleanQuery.split(/\s+/).filter(t => t.length > 1);
 
   for (const [key, val] of Object.entries(FAMOUS_INDIAN_PLACES)) {
     const keyClean = key.replace(/[,.-]/g, ' ');
-    if (cleanQuery.includes(keyClean) || keyClean.includes(cleanQuery)) {
+    // Only exact key match or when cleanQuery is a prefix/exact match of the landmark
+    if (cleanQuery === keyClean || (keyClean.startsWith(cleanQuery) && cleanQuery.length >= 3)) {
       if (!addedIds.has(val.placeId)) {
         matches.push(val);
         addedIds.add(val.placeId);
       }
-    } else {
-      // Check if all major tokens match
-      const isTokenMatch = queryTokens.length >= 2 && queryTokens.every(tok => keyClean.includes(tok));
-      if (isTokenMatch && !addedIds.has(val.placeId)) {
+    } else if (queryTokens.length >= 2 && queryTokens.every(tok => keyClean.includes(tok))) {
+      if (!addedIds.has(val.placeId)) {
         matches.push(val);
         addedIds.add(val.placeId);
       }
     }
   }
+
   if (matches.length > 0) return matches;
 
-  // Real-time OpenStreetMap Nominatim Geocoding fallback with full Indian address details
-  try {
-    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', India')}&limit=5&addressdetails=1`;
-    const response = await fetch(url, {
-      headers: { 'Accept-Language': 'en' }
-    });
-
-    if (!response.ok) return [];
-
-    const data = await response.json();
-    return data.map((item: any) => {
-      const parts = item.display_name.split(',');
-      const title = parts[0]?.trim() || item.name || query;
-      const address = parts.slice(1).join(',').trim() || item.display_name;
-
-      return {
-        placeId: item.place_id.toString(),
-        displayName: item.display_name,
-        title,
-        address,
-        lat: parseFloat(item.lat),
-        lng: parseFloat(item.lon)
-      };
-    });
-  } catch (error) {
-    console.error('Geocoding search failed:', error);
-    return [];
-  }
+  // 3. Fallback: Allow any typed place to be used as a custom point using default coordinates or Delhi NCR center
+  return [{
+    placeId: `custom-${Date.now()}`,
+    displayName: `${query.trim()}, India`,
+    title: query.trim(),
+    address: `${query.trim()}, India`,
+    lat: 28.6139,
+    lng: 77.2090
+  }];
 }
 
 export async function reverseGeocode(lat: number, lng: number): Promise<string | null> {

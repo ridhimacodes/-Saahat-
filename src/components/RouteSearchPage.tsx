@@ -413,7 +413,7 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
               </div>
 
               {/* FROM Autocomplete Dropdown */}
-              {showOriginDropdown && originSuggestions.length > 0 && (
+              {showOriginDropdown && (originSuggestions.length > 0 || originTitle.trim().length > 1) && (
                 <div className="absolute left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-[#E0D0C9] p-2 z-50 max-h-60 overflow-y-auto space-y-1">
                   {originSuggestions.map((item) => (
                     <button
@@ -429,6 +429,23 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
                       <div className="text-[#7E5767] text-[11px] truncate pl-5">{item.address}</div>
                     </button>
                   ))}
+                  {originTitle.trim().length > 1 && !originSuggestions.some(s => s.title.toLowerCase() === originTitle.trim().toLowerCase()) && (
+                    <button
+                      type="button"
+                      onClick={() => handleSelectOriginSuggestion({
+                        placeId: `custom-from-${Date.now()}`,
+                        title: originTitle.trim(),
+                        displayName: `${originTitle.trim()}, India`,
+                        address: `${originTitle.trim()}, India`,
+                        lat: 28.5900,
+                        lng: 77.3400
+                      })}
+                      className="w-full text-left p-2.5 rounded-xl hover:bg-[#F9F4F0] text-xs text-[#A3526B] font-semibold flex items-center gap-2 border-t border-slate-100"
+                    >
+                      <MapPin className="w-3.5 h-3.5 shrink-0" />
+                      <span>Use custom location: "{originTitle.trim()}"</span>
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -469,7 +486,7 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
               </div>
 
               {/* TO Autocomplete Dropdown */}
-              {showDestDropdown && destSuggestions.length > 0 && (
+              {showDestDropdown && (destSuggestions.length > 0 || destTitle.trim().length > 1) && (
                 <div className="absolute left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-[#E0D0C9] p-2 z-50 max-h-60 overflow-y-auto space-y-1">
                   {destSuggestions.map((item) => (
                     <button
@@ -479,12 +496,29 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
                       className="w-full text-left p-3 rounded-xl hover:bg-[#F9F4F0] text-xs space-y-0.5 border-b border-slate-50 last:border-0"
                     >
                       <div className="font-bold text-[#3E1627] flex items-center gap-1.5">
-                        <MapPin className="w-3.5 h-3.5 text-[#1E6B45]" />
-                        <span>{item.title}</span>
+                        <MapPin className="w-3.5 h-3.5 text-[#1E6B45] shrink-0" />
+                        <span className="truncate">{item.title}</span>
                       </div>
                       <div className="text-[#7E5767] text-[11px] truncate pl-5">{item.address}</div>
                     </button>
                   ))}
+                  {destTitle.trim().length > 1 && !destSuggestions.some(s => s.title.toLowerCase() === destTitle.trim().toLowerCase()) && (
+                    <button
+                      type="button"
+                      onClick={() => handleSelectDestSuggestion({
+                        placeId: `custom-to-${Date.now()}`,
+                        title: destTitle.trim(),
+                        displayName: `${destTitle.trim()}, India`,
+                        address: `${destTitle.trim()}, India`,
+                        lat: 28.6042,
+                        lng: 77.3458
+                      })}
+                      className="w-full text-left p-2.5 rounded-xl hover:bg-[#F9F4F0] text-xs text-[#1E6B45] font-semibold flex items-center gap-2 border-t border-slate-100"
+                    >
+                      <MapPin className="w-3.5 h-3.5 shrink-0" />
+                      <span>Use custom location: "{destTitle.trim()}"</span>
+                    </button>
+                  )}
                 </div>
               )}
             </div>
