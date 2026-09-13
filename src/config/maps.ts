@@ -10,12 +10,16 @@ export const DEFAULT_GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_
 
 /**
  * =======================================================================
- * MAP & SPATIAL SERVICES API PLACEHOLDERS
+ * GEOAPIFY SPATIAL SERVICES API PLACEHOLDERS & CONFIGURATION
  * =======================================================================
- * Configure your keys in a `.env` file (e.g. VITE_GOOGLE_MAPS_API_KEY=...)
- * or replace the placeholder strings below.
+ * To connect your live Geoapify API key:
+ * 1. Set `VITE_GEOAPIFY_API_KEY=your_key` in your `.env` file, OR
+ * 2. Paste your API key string below in `DEFAULT_GEOAPIFY_API_KEY`.
  */
-export interface MapServiceEndpoints {
+export const DEFAULT_GEOAPIFY_API_KEY =
+  import.meta.env.VITE_GEOAPIFY_API_KEY || "YOUR_GEOAPIFY_API_KEY_HERE";
+
+export interface GeoapifyServiceEndpoints {
   mapTiles: {
     apiKey: string;
     tileUrlTemplate: string;
@@ -51,71 +55,71 @@ export interface MapServiceEndpoints {
   };
 }
 
-export const MAP_API_CONFIG: MapServiceEndpoints = {
-  // 1. Map Tiles API (Leaflet raster/vector map layer)
+export const MAP_API_CONFIG: GeoapifyServiceEndpoints = {
+  // 1. Map Tiles API (Geoapify raster/vector styles: osm-bright, klokantech-basic, positron, etc.)
   mapTiles: {
-    apiKey: import.meta.env.VITE_MAP_TILES_API_KEY || DEFAULT_GOOGLE_MAPS_API_KEY,
+    apiKey: import.meta.env.VITE_GEOAPIFY_MAP_TILES_API_KEY || DEFAULT_GEOAPIFY_API_KEY,
     tileUrlTemplate:
-      import.meta.env.VITE_MAP_TILES_URL ||
-      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      import.meta.env.VITE_GEOAPIFY_MAP_TILES_URL ||
+      "https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}.png?apiKey={API_KEY}",
     attribution:
-      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      'Powered by <a href="https://www.geoapify.com/" target="_blank">Geoapify</a> | &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors'
   },
 
-  // 2. Geocoding API (Address / Landmark -> Coordinates)
+  // 2. Geocoding API (Forward Address/Place Search -> Coordinates)
   geocoding: {
-    apiKey: import.meta.env.VITE_GEOCODING_API_KEY || DEFAULT_GOOGLE_MAPS_API_KEY,
+    apiKey: import.meta.env.VITE_GEOAPIFY_GEOCODING_API_KEY || DEFAULT_GEOAPIFY_API_KEY,
     endpoint:
-      import.meta.env.VITE_GEOCODING_API_URL ||
-      "https://maps.googleapis.com/maps/api/geocode/json?address={ADDRESS}&key={KEY}"
+      import.meta.env.VITE_GEOAPIFY_GEOCODING_API_URL ||
+      "https://api.geoapify.com/v1/geocode/search?text={TEXT}&filter=countrycode:in&apiKey={API_KEY}"
   },
 
-  // 3. Autocomplete API (Live search suggestions while typing)
+  // 3. Autocomplete API (Live address/place suggestions while typing)
   autocomplete: {
-    apiKey: import.meta.env.VITE_AUTOCOMPLETE_API_KEY || DEFAULT_GOOGLE_MAPS_API_KEY,
+    apiKey: import.meta.env.VITE_GEOAPIFY_AUTOCOMPLETE_API_KEY || DEFAULT_GEOAPIFY_API_KEY,
     endpoint:
-      import.meta.env.VITE_AUTOCOMPLETE_API_URL ||
-      "https://maps.googleapis.com/maps/api/place/autocomplete/json?input={INPUT}&components=country:in&key={KEY}"
+      import.meta.env.VITE_GEOAPIFY_AUTOCOMPLETE_API_URL ||
+      "https://api.geoapify.com/v1/geocode/autocomplete?text={TEXT}&filter=countrycode:in&bias=proximity:{LNG},{LAT}&apiKey={API_KEY}"
   },
 
-  // 4. Places API (Nearby search, points of interest, safe havens)
+  // 4. Places API (Nearby Search for Points of Interest, safe havens, shops, transit)
   places: {
-    apiKey: import.meta.env.VITE_PLACES_API_KEY || DEFAULT_GOOGLE_MAPS_API_KEY,
+    apiKey: import.meta.env.VITE_GEOAPIFY_PLACES_API_KEY || DEFAULT_GEOAPIFY_API_KEY,
     endpoint:
-      import.meta.env.VITE_PLACES_API_URL ||
-      "https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={LAT},{LNG}&radius={RADIUS}&key={KEY}"
+      import.meta.env.VITE_GEOAPIFY_PLACES_API_URL ||
+      "https://api.geoapify.com/v2/places?categories={CATEGORIES}&filter=circle:{LNG},{LAT},{RADIUS}&bias=proximity:{LNG},{LAT}&limit=20&apiKey={API_KEY}"
   },
 
-  // 5. Place Details API (Full address, hours, vicinity, geometry)
+  // 5. Place Details API (Detailed venue features, address, contact, facilities)
   placeDetails: {
-    apiKey: import.meta.env.VITE_PLACE_DETAILS_API_KEY || DEFAULT_GOOGLE_MAPS_API_KEY,
+    apiKey: import.meta.env.VITE_GEOAPIFY_PLACE_DETAILS_API_KEY || DEFAULT_GEOAPIFY_API_KEY,
     endpoint:
-      import.meta.env.VITE_PLACE_DETAILS_API_URL ||
-      "https://maps.googleapis.com/maps/api/place/details/json?place_id={PLACE_ID}&fields=name,formatted_address,geometry,vicinity,opening_hours&key={KEY}"
+      import.meta.env.VITE_GEOAPIFY_PLACE_DETAILS_API_URL ||
+      "https://api.geoapify.com/v2/place-details?id={PLACE_ID}&apiKey={API_KEY}"
   },
 
-  // 6. Routing API (Direction polylines, duration, distance, walking routes)
+  // 6. Routing API (Turn-by-turn walking/transit directions, distance, and coordinates)
   routing: {
-    apiKey: import.meta.env.VITE_ROUTING_API_KEY || DEFAULT_GOOGLE_MAPS_API_KEY,
+    apiKey: import.meta.env.VITE_GEOAPIFY_ROUTING_API_KEY || DEFAULT_GEOAPIFY_API_KEY,
     endpoint:
-      import.meta.env.VITE_ROUTING_API_URL ||
-      "https://maps.googleapis.com/maps/api/directions/json?origin={ORIGIN}&destination={DESTINATION}&mode=walking&alternatives=true&key={KEY}"
+      import.meta.env.VITE_GEOAPIFY_ROUTING_API_URL ||
+      "https://api.geoapify.com/v1/routing?waypoints={FROM_LAT},{FROM_LNG}|{TO_LAT},{TO_LNG}&mode=walk&details=instruction_details&apiKey={API_KEY}"
   },
 
-  // 7. Reverse Geocoding API (Coordinates [lat, lng] -> Formatted address)
+  // 7. Reverse Geocoding API (Coordinates [lat, lng] -> Formatted Street Address)
   reverseGeocoding: {
-    apiKey: import.meta.env.VITE_REVERSE_GEOCODING_API_KEY || DEFAULT_GOOGLE_MAPS_API_KEY,
+    apiKey: import.meta.env.VITE_GEOAPIFY_REVERSE_GEOCODING_API_KEY || DEFAULT_GEOAPIFY_API_KEY,
     endpoint:
-      import.meta.env.VITE_REVERSE_GEOCODING_API_URL ||
-      "https://maps.googleapis.com/maps/api/geocode/json?latlng={LAT},{LNG}&key={KEY}"
+      import.meta.env.VITE_GEOAPIFY_REVERSE_GEOCODING_API_URL ||
+      "https://api.geoapify.com/v1/geocode/reverse?lat={LAT}&lon={LNG}&apiKey={API_KEY}"
   },
 
-  // 8. Static Map API (Snapshot images for Low Signal mode & emergency SMS)
+  // 8. Static Map API (Snapshot images for Low Signal mode & SMS Tracking)
   staticMap: {
-    apiKey: import.meta.env.VITE_STATIC_MAP_API_KEY || DEFAULT_GOOGLE_MAPS_API_KEY,
+    apiKey: import.meta.env.VITE_GEOAPIFY_STATIC_MAP_API_KEY || DEFAULT_GEOAPIFY_API_KEY,
     endpoint:
-      import.meta.env.VITE_STATIC_MAP_API_URL ||
-      "https://maps.googleapis.com/maps/api/staticmap?center={LAT},{LNG}&zoom={ZOOM}&size={WIDTH}x{HEIGHT}&markers=color:red%7C{LAT},{LNG}&key={KEY}"
+      import.meta.env.VITE_GEOAPIFY_STATIC_MAP_API_URL ||
+      "https://maps.geoapify.com/v1/staticmap?style=osm-bright&width={WIDTH}&height={HEIGHT}&center=lonlat:{LNG},{LAT}&zoom={ZOOM}&marker=lonlat:{LNG},{LAT};color:%23c2414c;size:medium&apiKey={API_KEY}"
   }
 };
 
