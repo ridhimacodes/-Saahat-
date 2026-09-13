@@ -149,7 +149,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 title="Toggle Global Low Signal & Offline Battery Saver Mode"
               >
                 <BatteryLow className={`w-4 h-4 ${isLowSignalGlobal ? 'text-slate-950 animate-pulse' : 'text-amber-600'}`} />
-                <span>Offline Mode</span>
+                <span>Low Power Mode</span>
                 <span className={`w-2 h-2 rounded-full ${isLowSignalGlobal ? 'bg-emerald-700 animate-ping' : 'bg-slate-400'}`} />
               </button>
             </nav>
@@ -211,7 +211,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             }`}
           >
             <BatteryLow className="w-5 h-5 mb-0.5 text-amber-400 animate-pulse" />
-            <span className="text-[10px]">Offline Mode</span>
+            <span className="text-[10px]">Low Power Mode</span>
           </button>
 
           <button
