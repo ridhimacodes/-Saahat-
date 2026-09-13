@@ -9,6 +9,7 @@ import {
   geocodeGoogleAddress,
   ensureGoogleMapsLoaded,
   getApiKey,
+  onGooglePlacesDebug,
   GooglePlaceResult 
 } from '../services/googleMapsService';
 
@@ -48,6 +49,9 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
   const [isLocatingUser, setIsLocatingUser] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
 
+  // Live Debug Banner State for Places API Responses
+  const [apiDebug, setApiDebug] = useState<{ status: string; message: string; timestamp: string } | null>(null);
+
   // Container refs for detecting clicks outside
   const originContainerRef = useRef<HTMLDivElement>(null);
   const destContainerRef = useRef<HTMLDivElement>(null);
@@ -58,6 +62,14 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
   const [showOriginDropdown, setShowOriginDropdown] = useState(false);
   const [showDestDropdown, setShowDestDropdown] = useState(false);
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+
+  // Subscribe to live Google Places debug logs
+  useEffect(() => {
+    const unsubscribe = onGooglePlacesDebug((info) => {
+      setApiDebug(info);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Close suggestions on clicking outside
   useEffect(() => {
@@ -114,10 +126,10 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
     const timer = setTimeout(async () => {
       if (showOriginDropdown) {
         if (originTitle.trim().length >= 1) {
-          const googlePreds = await getGooglePlacePredictions(originTitle, userCoords || undefined);
-          if (googlePreds && googlePreds.length > 0) {
+          const resp = await getGooglePlacePredictions(originTitle, userCoords || undefined);
+          if (resp && resp.predictions && resp.predictions.length > 0) {
             setOriginSuggestions(
-              googlePreds.map((gp) => ({
+              resp.predictions.map((gp) => ({
                 placeId: gp.placeId,
                 displayName: gp.description,
                 title: gp.mainText,
@@ -145,10 +157,10 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
     const timer = setTimeout(async () => {
       if (showDestDropdown) {
         if (destTitle.trim().length >= 1) {
-          const googlePreds = await getGooglePlacePredictions(destTitle, userCoords || undefined);
-          if (googlePreds && googlePreds.length > 0) {
+          const resp = await getGooglePlacePredictions(destTitle, userCoords || undefined);
+          if (resp && resp.predictions && resp.predictions.length > 0) {
             setDestSuggestions(
-              googlePreds.map((gp) => ({
+              resp.predictions.map((gp) => ({
                 placeId: gp.placeId,
                 displayName: gp.description,
                 title: gp.mainText,
@@ -367,6 +379,36 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
               Search any place in India — a college, metro station, landmark, hospital or address.
             </p>
           </div>
+
+          {/* Live Google Places API Debug Banner */}
+          {apiDebug && (
+            <div className={`p-3.5 rounded-2xl text-xs font-mono border flex items-start justify-between gap-3 ${
+              apiDebug.status === 'OK'
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                : apiDebug.status === 'ZERO_RESULTS'
+                ? 'bg-amber-50 border-amber-200 text-amber-900'
+                : 'bg-rose-50 border-rose-300 text-rose-900'
+            }`}>
+              <div className="space-y-1 flex-1">
+                <div className="flex items-center gap-2 font-bold">
+                  <span className={`inline-block w-2 h-2 rounded-full ${apiDebug.status === 'OK' ? 'bg-emerald-500' : apiDebug.status === 'ZERO_RESULTS' ? 'bg-amber-500' : 'bg-rose-500'}`} />
+                  <span>Google Places API: [{apiDebug.status}]</span>
+                  <span className="text-[10px] text-slate-500 font-normal">({apiDebug.timestamp})</span>
+                </div>
+                <div className="text-[11px] leading-relaxed break-words opacity-90">
+                  {apiDebug.message}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setApiDebug(null)}
+                className="text-slate-400 hover:text-slate-700 p-0.5"
+                title="Dismiss debug banner"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
 
           {searchError && (
             <div className="p-4 rounded-2xl text-xs font-semibold bg-rose-50 border border-rose-200 text-rose-800 flex items-center gap-2.5">

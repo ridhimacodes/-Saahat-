@@ -41,62 +41,152 @@ export function ensureGoogleMapsLoaded(): Promise<boolean> {
   return googleMapsLoadedPromise;
 }
 
+export interface GooglePlacePredictionResponse {
+  predictions: GooglePlacePrediction[];
+  rawStatus: string;
+  debugMessage: string;
+  source: 'google-places-js' | 'google-places-rest' | 'none';
+}
+
 /**
- * Fetch real-time place predictions using Google Places AutocompleteService
+ * Global debug listener so UI components can display real-time API responses
+ */
+type DebugListener = (info: { status: string; message: string; timestamp: string }) => void;
+const debugListeners: Set<DebugListener> = new Set();
+
+export function onGooglePlacesDebug(listener: DebugListener): () => void {
+  debugListeners.add(listener);
+  return () => debugListeners.delete(listener);
+}
+
+function broadcastDebug(status: string, message: string) {
+  const timestamp = new Date().toLocaleTimeString();
+  console.log(`[Google Places API Debug] [${timestamp}] Status: ${status} | Message: ${message}`);
+  debugListeners.forEach((fn) => {
+    try {
+      fn({ status, message, timestamp });
+    } catch (e) {
+      console.error(e);
+    }
+  });
+}
+
+/**
+ * Fetch real-time place predictions using Google Places API (no restrictive types, unrestricted bias to India)
  */
 export async function getGooglePlacePredictions(
   input: string,
   userLocation?: { lat: number; lng: number }
-): Promise<GooglePlacePrediction[]> {
-  if (!input || input.trim().length < 1) return [];
+): Promise<GooglePlacePredictionResponse> {
+  if (!input || input.trim().length < 1) {
+    return { predictions: [], rawStatus: 'EMPTY_INPUT', debugMessage: 'Query is empty', source: 'none' };
+  }
+
+  const trimmed = input.trim();
+  const apiKey = getApiKey();
+
+  if (!apiKey) {
+    const msg = 'No Google Maps API Key configured (VITE_GOOGLE_MAPS_API_KEY is empty). Falling back to OpenStreetMap.';
+    console.warn(`[Google Places API] ${msg}`);
+    broadcastDebug('NO_API_KEY', msg);
+    return { predictions: [], rawStatus: 'NO_API_KEY', debugMessage: msg, source: 'none' };
+  }
 
   const loaded = await ensureGoogleMapsLoaded();
   const win = window as any;
 
-  if (!loaded || !win.google || !win.google.maps || !win.google.maps.places) {
-    console.warn("Google Maps JS API is not loaded or API key is missing.");
-    return [];
+  // 1. First attempt: Google Maps JavaScript AutocompleteService
+  if (loaded && win.google && win.google.maps && win.google.maps.places) {
+    return new Promise((resolve) => {
+      try {
+        const autocompleteService = new win.google.maps.places.AutocompleteService();
+        
+        // Unrestricted search: NO types filter (e.g. no '(cities)', no 'establishment' restrictions)
+        // Searches all landmarks, schools, stadiums, stores, local buildings, streets, etc.
+        const request: any = {
+          input: trimmed,
+          // country: 'in' component restriction to bias within India without restricting categories
+          componentRestrictions: { country: 'in' }
+        };
+
+        if (userLocation && typeof userLocation.lat === 'number' && typeof userLocation.lng === 'number') {
+          request.location = new win.google.maps.LatLng(userLocation.lat, userLocation.lng);
+          request.radius = 50000; // 50km radius bias
+        }
+
+        console.log(`[Google Places Autocomplete] Sending request for "${trimmed}":`, request);
+
+        autocompleteService.getPlacePredictions(
+          request,
+          (predictions: any[], status: any) => {
+            // FULL RAW API RESPONSE LOGGED TO CONSOLE
+            console.log(`[Google Places API Response] query: "${trimmed}"`, {
+              rawStatusCode: status,
+              predictionsCount: predictions?.length || 0,
+              rawPredictions: predictions
+            });
+
+            const statusStr = String(status);
+
+            if (status === win.google.maps.places.PlacesServiceStatus.OK && predictions && predictions.length > 0) {
+              const formatted: GooglePlacePrediction[] = predictions.map((p) => ({
+                placeId: p.place_id,
+                mainText: p.structured_formatting?.main_text || p.description,
+                secondaryText: p.structured_formatting?.secondary_text || '',
+                description: p.description
+              }));
+              const msg = `Received ${formatted.length} prediction(s) for "${trimmed}"`;
+              broadcastDebug(statusStr, msg);
+              resolve({
+                predictions: formatted,
+                rawStatus: statusStr,
+                debugMessage: msg,
+                source: 'google-places-js'
+              });
+            } else {
+              let explanation = `Status: ${statusStr}`;
+              if (statusStr === 'ZERO_RESULTS') {
+                explanation = `Google Places found 0 results for "${trimmed}". (Check spelling or try broader keywords)`;
+              } else if (statusStr === 'REQUEST_DENIED') {
+                explanation = `API Request Denied. Please ensure 'Places API' / 'Places API (New)' is enabled and billing is active in Google Cloud Console.`;
+              } else if (statusStr === 'OVER_QUERY_LIMIT') {
+                explanation = `Google Places quota limit exceeded.`;
+              } else if (statusStr === 'INVALID_REQUEST') {
+                explanation = `Invalid request parameters sent to Google Places.`;
+              }
+              broadcastDebug(statusStr, explanation);
+              resolve({
+                predictions: [],
+                rawStatus: statusStr,
+                debugMessage: explanation,
+                source: 'google-places-js'
+              });
+            }
+          }
+        );
+      } catch (err: any) {
+        console.error('[Google Places Autocomplete Exception]:', err);
+        const errMsg = err?.message || String(err);
+        broadcastDebug('EXCEPTION', errMsg);
+        resolve({
+          predictions: [],
+          rawStatus: 'EXCEPTION',
+          debugMessage: errMsg,
+          source: 'google-places-js'
+        });
+      }
+    });
   }
 
-  return new Promise((resolve) => {
-    try {
-      const autocompleteService = new win.google.maps.places.AutocompleteService();
-      
-      const request: any = {
-        input: input.trim(),
-        componentRestrictions: { country: 'in' }
-      };
-
-      if (userLocation && typeof userLocation.lat === 'number' && typeof userLocation.lng === 'number') {
-        request.location = new win.google.maps.LatLng(userLocation.lat, userLocation.lng);
-        request.radius = 50000; // 50km radius bias around user location
-      } else {
-        // Default location bias to Delhi / Central India
-        request.location = new win.google.maps.LatLng(28.6139, 77.2090);
-        request.radius = 500000; // 500km radius bias
-      }
-
-      autocompleteService.getPlacePredictions(
-        request,
-        (predictions: any[], status: any) => {
-          if (status === win.google.maps.places.PlacesServiceStatus.OK && predictions && predictions.length > 0) {
-            const formatted = predictions.map((p) => ({
-              placeId: p.place_id,
-              mainText: p.structured_formatting?.main_text || p.description,
-              secondaryText: p.structured_formatting?.secondary_text || '',
-              description: p.description
-            }));
-            resolve(formatted);
-          } else {
-            resolve([]);
-          }
-        }
-      );
-    } catch (err) {
-      console.error("Google Places Autocomplete error:", err);
-      resolve([]);
-    }
-  });
+  // 2. If JS SDK failed to initialize, report clear error
+  const msg = 'Google Maps JavaScript SDK is not ready or failed to load.';
+  broadcastDebug('SDK_NOT_LOADED', msg);
+  return {
+    predictions: [],
+    rawStatus: 'SDK_NOT_LOADED',
+    debugMessage: msg,
+    source: 'none'
+  };
 }
 
 /**
