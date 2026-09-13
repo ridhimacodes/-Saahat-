@@ -12,6 +12,7 @@ import { AboutPrivacyPage } from './components/AboutPrivacyPage';
 import { LowSignalPage } from './components/LowSignalPage';
 import { ActiveJourneyPage } from './components/ActiveJourneyPage';
 import { SOSModal } from './components/SOSModal';
+import { SaahatAssistant } from './components/SaahatAssistant';
 import { User, X, Camera, CheckCircle2 } from 'lucide-react';
 import { generateRealRoutes, recalculateRouteScoresForTime, getLiveTimeOfDay } from './services/routing';
 
@@ -260,6 +261,17 @@ export function App() {
         trustedContact={TRUSTED_CONTACTS[0]} 
         isOpenDirectly={isSOSOpenDirectly}
         onCloseDirectly={() => setIsSOSOpenDirectly(false)}
+      />
+
+      {/* Persistent Saahat Assistant Chatbot (Bottom-Left Corner) */}
+      <SaahatAssistant
+        activePage={activePage}
+        selectedRoute={selectedRoute}
+        origin={origin}
+        destination={destination}
+        timeOfDay={timeOfDay}
+        isLowSignalGlobal={isLowSignalGlobal}
+        onTriggerSOS={() => setIsSOSOpenDirectly(true)}
       />
 
       {/* User Profile Modal */}

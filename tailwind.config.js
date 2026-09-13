@@ -28,6 +28,7 @@ export default {
         'float-medium': 'float 3s ease-in-out infinite',
         'pulse-glow': 'pulseGlow 2s infinite',
         'draw-path': 'drawPath 2s ease-out forwards',
+        'spin-slow': 'spin 12s linear infinite',
       },
       keyframes: {
         float: {
