@@ -232,10 +232,12 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
   });
 
   // Navigation and Tracking states
+  // Navigation and Tracking states
   const [currentStepIdx, setCurrentStepIdx] = useState(0);
   const [isNavigationActive, setIsNavigationActive] = useState(false);
   const [isVoiceMuted, setIsVoiceMuted] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [activeSpeechSubtitle, setActiveSpeechSubtitle] = useState<string | null>(null);
   const [showStepsDrawer, setShowStepsDrawer] = useState(false);
   const [hasArrived, setHasArrived] = useState(false);
   const [recenterTrigger, setRecenterTrigger] = useState(0);
@@ -253,7 +255,17 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
   const [simSpeed, setSimSpeed] = useState<1 | 2 | 5>(1);
   const [simProgressIndex, setSimProgressIndex] = useState(0);
 
-  // Refs for tracking speech announcements per step to prevent duplicate announcements
+  // Refs for speech queue and tracking
+  const speechQueueRef = useRef<string[]>([]);
+  const isSpeechProcessingRef = useRef<boolean>(false);
+  const currentUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const isVoiceMutedRef = useRef<boolean>(isVoiceMuted);
+  useEffect(() => {
+    isVoiceMutedRef.current = isVoiceMuted;
+  }, [isVoiceMuted]);
+
+  // Throttling and announcement state refs
+  const lastPosUpdateRef = useRef<number>(0);
   const announcedAdvanceStepRef = useRef<Set<number>>(new Set());
   const announcedNowStepRef = useRef<Set<number>>(new Set());
   const lastOffRouteAnnouncementTime = useRef<number>(0);
@@ -296,35 +308,118 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
     { type: 'fuel', title: 'HP Fuel & Express Station', lat: originCoords[0] - 0.002, lng: originCoords[1] - 0.004 },
   ] : [];
 
-  // Web Speech API Voice Assistant Helper
-  const speakText = (text: string) => {
-    if (isVoiceMuted) return;
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
+  // Robust Queued Web Speech API Engine
+  const playNextQueuedSpeech = () => {
+    if (isVoiceMutedRef.current) {
+      speechQueueRef.current = [];
+      isSpeechProcessingRef.current = false;
+      setIsSpeaking(false);
+      setActiveSpeechSubtitle(null);
+      return;
+    }
+
+    if (!('speechSynthesis' in window)) {
+      return;
+    }
+
+    if (speechQueueRef.current.length === 0) {
+      isSpeechProcessingRef.current = false;
+      setIsSpeaking(false);
+      // Fade out subtitle after 4 seconds of speech ending
+      setTimeout(() => {
+        if (speechQueueRef.current.length === 0 && !isSpeechProcessingRef.current) {
+          setActiveSpeechSubtitle(null);
+        }
+      }, 4000);
+      return;
+    }
+
+    isSpeechProcessingRef.current = true;
+    const nextText = speechQueueRef.current.shift()!;
+    setActiveSpeechSubtitle(nextText);
+
+    try {
+      const utterance = new SpeechSynthesisUtterance(nextText);
       utterance.rate = 0.95;
       utterance.pitch = 1.0;
-      utterance.onstart = () => setIsSpeaking(true);
-      utterance.onend = () => setIsSpeaking(false);
-      utterance.onerror = () => setIsSpeaking(false);
+      currentUtteranceRef.current = utterance;
+
+      utterance.onstart = () => {
+        setIsSpeaking(true);
+      };
+
+      utterance.onend = () => {
+        currentUtteranceRef.current = null;
+        // Small pause between utterances for natural breathing cadence
+        setTimeout(() => {
+          playNextQueuedSpeech();
+        }, 200);
+      };
+
+      utterance.onerror = (e) => {
+        console.warn('SpeechSynthesis error:', e);
+        currentUtteranceRef.current = null;
+        setTimeout(() => {
+          playNextQueuedSpeech();
+        }, 100);
+      };
+
       window.speechSynthesis.speak(utterance);
+    } catch (err) {
+      console.warn('Speech synthesis speak failure:', err);
+      isSpeechProcessingRef.current = false;
+      setIsSpeaking(false);
+    }
+  };
+
+  // Enqueue speech instruction (or force priority interrupt if specified)
+  const queueSpeech = (text: string, forcePriority = false) => {
+    if (isVoiceMutedRef.current) return;
+    
+    // Also always show subtitle immediately
+    setActiveSpeechSubtitle(text);
+
+    if (forcePriority) {
+      // Clear queue and switch to priority announcement
+      speechQueueRef.current = [text];
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+      isSpeechProcessingRef.current = false;
+      playNextQueuedSpeech();
+      return;
+    }
+
+    // Do not queue identical text back-to-back
+    if (speechQueueRef.current[speechQueueRef.current.length - 1] === text) {
+      return;
+    }
+
+    speechQueueRef.current.push(text);
+
+    // If speech is not currently playing, start immediately
+    if (!isSpeechProcessingRef.current && (!('speechSynthesis' in window) || !window.speechSynthesis.speaking)) {
+      playNextQueuedSpeech();
     }
   };
 
   // Start Navigation Action
   const handleStartNavigation = () => {
     setIsNavigationActive(true);
-    speakText(`Starting navigation to ${destination.split(',')[0]}. Head towards ${steps[0]}`);
+    queueSpeech(`Starting navigation to ${destination.split(',')[0]}. Head towards ${steps[0]}`, true);
   };
 
   // Pause / Stop Navigation Action
   const handlePauseNavigation = () => {
     setIsNavigationActive(false);
+    speechQueueRef.current = [];
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
     }
+    isSpeechProcessingRef.current = false;
     setIsSpeaking(false);
-    speakText("Navigation paused.");
+    setActiveSpeechSubtitle("Navigation paused.");
+    queueSpeech("Navigation paused.", true);
   };
 
   // Arrival Trigger
@@ -333,7 +428,7 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
     setIsNavigationActive(false);
     setIsSimulationMode(false);
     markJourneyComplete(journeyLogId);
-    speakText(`You have arrived safely at ${destination.split(',')[0]}. Journey complete.`);
+    queueSpeech(`You have arrived safely at ${destination.split(',')[0]}. Journey complete.`, true);
     confetti({
       particleCount: 180,
       spread: 100,
@@ -341,8 +436,14 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
     });
   };
 
-  // Continuous Proximity-based Turn-by-Turn Logic processor
+  // Continuous Proximity-based Turn-by-Turn Logic processor with update throttling
   const processPositionUpdate = (pos: [number, number]) => {
+    const now = Date.now();
+    // Throttle user position state updates to at most once every 600ms to prevent component render churn
+    if (now - lastPosUpdateRef.current < 600) {
+      return;
+    }
+    lastPosUpdateRef.current = now;
     setUserLivePos(pos);
 
     // 1. Check distance to final destination
@@ -358,10 +459,9 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
       offRouteCountRef.current += 1;
       if (offRouteCountRef.current >= 2) {
         setIsOffRoute(true);
-        const now = Date.now();
         if (now - lastOffRouteAnnouncementTime.current > 15000) {
           lastOffRouteAnnouncementTime.current = now;
-          speakText("Off route. Recalculating route...");
+          queueSpeech("Off route. Recalculating route...", true);
           setIsRecalculating(true);
           setTimeout(() => setIsRecalculating(false), 3000);
         }
@@ -385,11 +485,11 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
         break;
       }
 
-      // Final turn prompt ("Turn left now" / "[Instruction] now") when ~20-30m away
+      // Final turn prompt ("Turn left now" / "[Instruction] now") when ~20-35m away
       if (distToStep <= 35 && !announcedNowStepRef.current.has(i) && isNavigationActive) {
         announcedNowStepRef.current.add(i);
         const instruction = steps[i];
-        speakText(`${instruction} now.`);
+        queueSpeech(`${instruction} now.`);
         break;
       }
 
@@ -397,7 +497,7 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
       if (distToStep > 40 && distToStep <= 220 && !announcedAdvanceStepRef.current.has(i) && isNavigationActive) {
         announcedAdvanceStepRef.current.add(i);
         const instruction = steps[i];
-        speakText(`In ${Math.round(distToStep)} meters, ${instruction}`);
+        queueSpeech(`In ${Math.round(distToStep)} meters, ${instruction}`);
         break;
       }
     }
@@ -444,7 +544,7 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
         watchIdRef.current = null;
       }
     };
-  }, [isNavigationActive, isSimulationMode, currentStepIdx, steps, stepCoordinates, coordinates, hasArrived, isOffRoute]);
+  }, [isNavigationActive, isSimulationMode]);
 
   // Simulation Mode: smooth playback along polyline coordinates for testing without walking
   useEffect(() => {
@@ -513,9 +613,9 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
 
   const handleReplayVoice = () => {
     if (hasArrived) {
-      speakText("You have arrived safely at your destination.");
+      queueSpeech("You have arrived safely at your destination.", true);
     } else {
-      speakText(`Step ${currentStepIdx + 1} of ${steps.length}: ${steps[currentStepIdx]}`);
+      queueSpeech(`Step ${currentStepIdx + 1} of ${steps.length}: ${steps[currentStepIdx]}`, true);
     }
   };
 
@@ -526,13 +626,13 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
   const handlePrevStep = () => {
     const prevIdx = Math.max(0, currentStepIdx - 1);
     setCurrentStepIdx(prevIdx);
-    speakText(`Step ${prevIdx + 1}: ${steps[prevIdx]}`);
+    queueSpeech(`Step ${prevIdx + 1}: ${steps[prevIdx]}`, true);
   };
 
   const handleNextStep = () => {
     const nextIdx = Math.min(steps.length - 1, currentStepIdx + 1);
     setCurrentStepIdx(nextIdx);
-    speakText(`Step ${nextIdx + 1}: ${steps[nextIdx]}`);
+    queueSpeech(`Step ${nextIdx + 1}: ${steps[nextIdx]}`, true);
   };
 
   return (
@@ -543,7 +643,7 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
       {/* FULL MAP CANVAS CONTAINER WITH ALL OVERLAYS INSIDE */}
       <div className="relative w-full h-full flex-1 z-10 overflow-hidden">
 
-        {/* TOP FLOATING OVERLAY CONTAINER: Direction Card & Amenity Filters */}
+        {/* TOP FLOATING OVERLAY CONTAINER: Direction Card, Live Subtitles & Amenity Filters */}
         <div className="absolute top-4 left-3 right-3 sm:left-6 sm:right-6 z-[400] max-w-3xl mx-auto space-y-2">
           
           {/* Primary Turn-by-Turn Direction Banner */}
@@ -696,6 +796,24 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
             </div>
           </div>
 
+          {/* Real-Time Live Speech Subtitles / Caption Fallback Card */}
+          <AnimatePresence>
+            {activeSpeechSubtitle && (
+              <motion.div
+                initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -6, scale: 0.98 }}
+                className="bg-slate-900/90 backdrop-blur-md text-amber-200 border border-amber-400/40 px-4 py-2 rounded-2xl shadow-xl flex items-center gap-2.5 text-xs font-semibold"
+              >
+                <div className="flex items-center gap-1 shrink-0 text-amber-400 font-bold uppercase tracking-wider text-[10px]">
+                  <Volume2 className={`w-3.5 h-3.5 ${isSpeaking ? 'animate-pulse text-amber-300' : 'text-amber-400'}`} />
+                  <span>Saarthi Voice:</span>
+                </div>
+                <p className="line-clamp-2 text-white font-medium">"{activeSpeechSubtitle}"</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Secondary Bar: Amenity Support Filters + Demo Simulation Mode Controls + Recenter Button */}
           <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
@@ -707,7 +825,7 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
                   if (nextSim && !isNavigationActive) {
                     setIsNavigationActive(true);
                   }
-                  speakText(nextSim ? "Simulation demo mode enabled." : "Live GPS tracking resumed.");
+                  queueSpeech(nextSim ? "Simulation demo mode enabled." : "Live GPS tracking resumed.", true);
                 }}
                 className={`px-3 py-1.5 rounded-full text-[11px] font-bold flex items-center gap-1.5 backdrop-blur-md transition-all shadow-md shrink-0 ${
                   isSimulationMode 
@@ -840,7 +958,7 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
                 eventHandlers={{
                   click: () => {
                     setCurrentStepIdx(sIdx);
-                    speakText(`Step ${sIdx + 1}: ${st}`);
+                    queueSpeech(`Step ${sIdx + 1}: ${st}`, true);
                   }
                 }}
               >
@@ -849,7 +967,7 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
                     <strong className="text-amber-800 block">Step {sIdx + 1} of {steps.length}</strong>
                     <p className="text-slate-800 font-bold">{st}</p>
                     <button
-                      onClick={() => speakText(`Step ${sIdx + 1}: ${st}`)}
+                      onClick={() => queueSpeech(`Step ${sIdx + 1}: ${st}`, true)}
                       className="mt-1 px-2.5 py-1 rounded bg-amber-400 text-slate-950 font-bold text-[10px] flex items-center gap-1"
                     >
                       <Volume1 className="w-3 h-3" />
@@ -946,7 +1064,7 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
                       key={sIdx}
                       onClick={() => {
                         setCurrentStepIdx(sIdx);
-                        speakText(`Step ${sIdx + 1}: ${st}`);
+                        queueSpeech(`Step ${sIdx + 1}: ${st}`, true);
                       }}
                       className={`p-3 rounded-2xl text-xs font-medium flex items-center justify-between cursor-pointer transition-all ${
                         isCurrent 
@@ -966,7 +1084,7 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          speakText(`Step ${sIdx + 1}: ${st}`);
+                          queueSpeech(`Step ${sIdx + 1}: ${st}`, true);
                         }}
                         className="p-1.5 rounded-lg bg-amber-400/20 text-amber-600 dark:text-amber-300 hover:bg-amber-400/30 transition-all shrink-0 ml-2"
                         title="Listen to this direction"
