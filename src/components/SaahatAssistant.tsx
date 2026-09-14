@@ -14,8 +14,9 @@ import {
   RefreshCw,
   Info
 } from 'lucide-react';
-import { RouteOption, TimeOfDay, UserProfile } from '../types';
+import { RouteOption, TimeOfDay, UserProfile, TrustedContact } from '../types';
 import { getAssistantResponse, AssistantMessage } from '../services/assistantService';
+import { fetchEmergencyContacts } from '../services/supabaseService';
 
 interface SaahatAssistantProps {
   activePage: string;
@@ -35,9 +36,9 @@ const INITIAL_MESSAGES: AssistantMessage[] = [
     text: "Hi, I'm Saarthi — your journey guide. Ask me anything about your route or the app.",
     timestamp: 'Just now',
     quickReplies: [
-      "Why is this route rated high?",
+      "Why is this route the best match?",
       "What does Low Signal Mode do?",
-      "How does Share ETA work?",
+      "What's in my Circle?",
       "Is this route well-lit?"
     ]
   }
@@ -93,6 +94,14 @@ export const SaahatAssistant: React.FC<SaahatAssistantProps> = ({
     // Realistic typing indicator delay (500ms - 900ms)
     setTimeout(async () => {
       try {
+        // Fetch current emergency contacts dynamically so Circle query is always real and up-to-date
+        let liveContacts: TrustedContact[] = [];
+        try {
+          liveContacts = await fetchEmergencyContacts();
+        } catch (e) {
+          // fallback to empty if unavailable
+        }
+
         const response = await getAssistantResponse(query, {
           activePage,
           selectedRoute,
@@ -100,7 +109,8 @@ export const SaahatAssistant: React.FC<SaahatAssistantProps> = ({
           destination,
           timeOfDay,
           isLowSignalGlobal,
-          userProfile
+          userProfile,
+          contacts: liveContacts
         });
 
         const assistantMsg: AssistantMessage = {
