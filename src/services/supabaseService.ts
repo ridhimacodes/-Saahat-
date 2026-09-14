@@ -19,19 +19,26 @@ export async function fetchUserProfile(): Promise<UserProfile> {
       .from('profiles')
       .select('*')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
 
     if (error || !data) {
-      return INITIAL_USER_PROFILE;
+      // Derive name directly from authentic auth user
+      const authName = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'My Profile';
+      const authAvatar = user.user_metadata?.avatar_url || user.user_metadata?.picture || INITIAL_USER_PROFILE.avatarUrl;
+      return {
+        name: authName,
+        avatarUrl: authAvatar,
+        savedLocations: [],
+      };
     }
 
     return {
-      name: data.name || INITIAL_USER_PROFILE.name,
+      name: data.name || user.email?.split('@')[0] || 'My Profile',
       avatarUrl: data.avatar_url || INITIAL_USER_PROFILE.avatarUrl,
-      savedLocations: data.saved_locations || INITIAL_USER_PROFILE.savedLocations,
+      savedLocations: data.saved_locations || [],
     };
   } catch (err) {
-    console.warn('Supabase fetchUserProfile fallback:', err);
+    console.warn('Supabase fetchUserProfile error:', err);
     return INITIAL_USER_PROFILE;
   }
 }
@@ -68,12 +75,12 @@ export async function saveUserProfile(profile: UserProfile): Promise<boolean> {
 
 export async function fetchEmergencyContacts(): Promise<TrustedContact[]> {
   if (!isSupabaseConfigured || !supabase) {
-    return TRUSTED_CONTACTS;
+    return [];
   }
 
   try {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return TRUSTED_CONTACTS;
+    if (!user) return [];
 
     const { data, error } = await supabase
       .from('emergency_contacts')
@@ -81,8 +88,8 @@ export async function fetchEmergencyContacts(): Promise<TrustedContact[]> {
       .eq('user_id', user.id)
       .order('created_at', { ascending: true });
 
-    if (error || !data || data.length === 0) {
-      return TRUSTED_CONTACTS;
+    if (error || !data) {
+      return [];
     }
 
     return data.map((item) => ({
@@ -93,8 +100,8 @@ export async function fetchEmergencyContacts(): Promise<TrustedContact[]> {
       avatarBg: item.avatar_bg || 'bg-purple-600',
     }));
   } catch (err) {
-    console.warn('Supabase fetchEmergencyContacts fallback:', err);
-    return TRUSTED_CONTACTS;
+    console.warn('Supabase fetchEmergencyContacts error:', err);
+    return [];
   }
 }
 
