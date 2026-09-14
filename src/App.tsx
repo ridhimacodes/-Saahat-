@@ -115,6 +115,8 @@ export function App() {
   // Recalculate routes dynamically whenever timeOfDay or base routes change
   const timeEvaluatedRoutes = recalculateRouteScoresForTime(routes, timeOfDay);
   const selectedRoute = timeEvaluatedRoutes.find(r => r.id === selectedRouteId) || timeEvaluatedRoutes[0];
+  const hasUserSearched = Boolean(origin && destination) || ['results', 'share', 'journey'].includes(activePage);
+  const saarthiActiveRoute = hasUserSearched ? selectedRoute : null;
 
   const handleSearchComplete = async (newOrigin: string, newDestination: string, newMode?: TravelMode) => {
     setOrigin(newOrigin);
@@ -312,7 +314,7 @@ export function App() {
       {/* Persistent Saarthi Chatbot (Bottom-Left Corner) */}
       <SaahatAssistant
         activePage={activePage}
-        selectedRoute={selectedRoute}
+        selectedRoute={saarthiActiveRoute}
         origin={origin}
         destination={destination}
         timeOfDay={timeOfDay}
