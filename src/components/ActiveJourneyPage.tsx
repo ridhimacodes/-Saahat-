@@ -242,6 +242,15 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
   );
   const currentPos = coordinates[currentPosIdx] || originCoords;
 
+  // Live dynamic ETA calculation based on remaining steps
+  const remainingFraction = Math.max(0, (steps.length - 1 - currentStepIdx) / Math.max(steps.length - 1, 1));
+  const remainingMinutes = Math.max(1, Math.round(selectedRoute.durationMinutes * remainingFraction));
+  const expectedArrivalTime = (() => {
+    const d = new Date();
+    d.setMinutes(d.getMinutes() + remainingMinutes);
+    return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  })();
+
   // Nearby places
   const mockNearbyPlaces = originCoords ? [
     { type: 'police', title: 'Police Assistance Desk', lat: originCoords[0] + 0.003, lng: originCoords[1] + 0.002 },
@@ -674,10 +683,10 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
             <div>
               <div className="flex items-center gap-1.5 text-xs text-amber-400 font-bold uppercase tracking-wider">
                 <Clock className="w-3.5 h-3.5" />
-                <span>ETA & Remaining</span>
+                <span>Live ETA: {expectedArrivalTime}</span>
               </div>
               <div className="text-xl sm:text-2xl font-black tracking-tight text-white mt-0.5">
-                {selectedRoute.durationMinutes} mins <span className="text-sm font-semibold text-slate-400">• {selectedRoute.distanceKm} km</span>
+                {remainingMinutes} mins left <span className="text-sm font-semibold text-slate-400">• {selectedRoute.distanceKm} km</span>
               </div>
             </div>
 

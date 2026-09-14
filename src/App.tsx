@@ -39,6 +39,7 @@ export function App() {
   const [travelMode, setTravelMode] = useState<TravelMode>('CAB');
   const [routes, setRoutes] = useState<RouteOption[]>(MOCK_ROUTES.default);
   const [selectedRouteId, setSelectedRouteId] = useState<string>("route-best");
+  const [isJourneyStarted, setIsJourneyStarted] = useState<boolean>(false);
 
   // Community Notes Feed State
   const [communityNotes, setCommunityNotes] = useState<CommunityNote[]>(INITIAL_COMMUNITY_NOTES);
@@ -136,7 +137,23 @@ export function App() {
 
   const handleProceedOnly = (route: RouteOption) => {
     setSelectedRouteId(route.id);
+    setIsJourneyStarted(true);
     changePage('journey');
+  };
+
+  const handleStartJourneyFromShare = () => {
+    setIsJourneyStarted(true);
+    changePage('journey');
+  };
+
+  const handleEndJourney = () => {
+    setIsJourneyStarted(false);
+    handleGoBack();
+  };
+
+  const handleNavigateHome = () => {
+    setIsJourneyStarted(false);
+    changePage('home');
   };
 
   const handleAddCommunityNote = (newNote: CommunityNote) => {
@@ -220,8 +237,9 @@ export function App() {
             {activePage === 'share' && (
               <ShareJourneyPage
                 selectedRoute={selectedRoute}
-                onNavigateHome={() => changePage('home')}
-                onStartJourney={() => changePage('journey')}
+                isJourneyStarted={isJourneyStarted}
+                onNavigateHome={handleNavigateHome}
+                onStartJourney={handleStartJourneyFromShare}
                 onBack={handleGoBack}
                 isLowSignalGlobal={isLowSignalGlobal}
               />
@@ -232,8 +250,8 @@ export function App() {
                 selectedRoute={selectedRoute}
                 origin={origin || "Selected Origin"}
                 destination={destination || "Selected Destination"}
-                onEndJourney={handleGoBack}
-                onNavigateHome={() => changePage('home')}
+                onEndJourney={handleEndJourney}
+                onNavigateHome={handleNavigateHome}
                 isLowSignalGlobal={isLowSignalGlobal}
                 timeOfDay={timeOfDay}
               />

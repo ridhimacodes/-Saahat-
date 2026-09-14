@@ -11,6 +11,7 @@ interface ShareJourneyPageProps {
   onStartJourney?: () => void;
   onBack?: () => void;
   isLowSignalGlobal?: boolean;
+  isJourneyStarted?: boolean;
 }
 
 export const ShareJourneyPage: React.FC<ShareJourneyPageProps> = ({
@@ -18,13 +19,22 @@ export const ShareJourneyPage: React.FC<ShareJourneyPageProps> = ({
   onNavigateHome,
   onStartJourney,
   onBack,
-  isLowSignalGlobal = false
+  isLowSignalGlobal = false,
+  isJourneyStarted = false
 }) => {
   const [selectedContact, setSelectedContact] = useState<TrustedContact>(TRUSTED_CONTACTS[0]);
   const [customName, setCustomName] = useState("");
   const [customPhone, setCustomPhone] = useState("");
   const [useCustomContact, setUseCustomContact] = useState(false);
-  const [arrivalTime, setArrivalTime] = useState("10:15 PM");
+  
+  // Compute realistic live arrival time (Now + duration)
+  const computeLiveETA = () => {
+    const d = new Date();
+    d.setMinutes(d.getMinutes() + (selectedRoute?.durationMinutes || 15));
+    return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const [arrivalTime, setArrivalTime] = useState(computeLiveETA());
   
   // State for message status
   const [isShared, setIsShared] = useState(false);
@@ -34,10 +44,16 @@ export const ShareJourneyPage: React.FC<ShareJourneyPageProps> = ({
   const contactName = useCustomContact ? (customName || "Trusted Contact") : selectedContact.name;
   const contactPhone = useCustomContact ? (customPhone || "+91 98765 43210") : selectedContact.phone;
 
-  const generatedMessage = `I'm heading home via ${selectedRoute.name.split('—')[0].trim()} (${selectedRoute.durationMinutes} mins), expected arrival by ${arrivalTime}. Powered by Saahat.`;
+  const generatedMessage = isJourneyStarted
+    ? `I have started my journey via ${selectedRoute.name.split('—')[0].trim()} (${selectedRoute.durationMinutes} mins), expected arrival by ${arrivalTime}. Powered by Saahat.`
+    : `Journey pending: Route planned via ${selectedRoute.name.split('—')[0].trim()} (${selectedRoute.durationMinutes} mins). Live ETA activates upon journey start. Powered by Saahat.`;
 
   const handleShareETA = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isJourneyStarted && onStartJourney) {
+      onStartJourney();
+      return;
+    }
     setIsShared(true);
   };
 
@@ -243,7 +259,7 @@ export const ShareJourneyPage: React.FC<ShareJourneyPageProps> = ({
               className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#6C2BD9] via-[#7C3AED] to-[#FF4D8D] text-white font-bold text-base shadow-lg shadow-purple-500/25 hover:shadow-xl hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2"
             >
               <Send className="w-5 h-5" />
-              <span>Share ETA with {contactName.split(' ')[0]}</span>
+              <span>{isJourneyStarted ? `Share Live ETA with ${contactName.split(' ')[0]}` : `Start Journey & Activate Live ETA`}</span>
             </button>
 
           </form>
