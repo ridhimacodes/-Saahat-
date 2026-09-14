@@ -1,4 +1,4 @@
-import { RouteOption, RouteConditionIcon, RouteHighlight } from '../types';
+import { RouteOption, RouteConditionIcon, RouteHighlight, TravelMode } from '../types';
 import { searchLocations } from './geocoding';
 import { 
   getGeoapifyRoute, 
@@ -276,8 +276,40 @@ export function getDynamicRouteNames(originQuery: string, destQuery: string) {
     ];
   }
 
-  // --- DELHI NCR SOUTH / AIRPORT / NOIDA / GURGAON ---
-  if (combined.includes("sector 15") || combined.includes("noida") || combined.includes("igi") || combined.includes("airport") || combined.includes("t3") || combined.includes("gurgaon") || combined.includes("gurugram") || combined.includes("dwarka") || combined.includes("saket")) {
+  // --- LOCAL NOIDA (Within Noida: Stadium, Sectors 10/12/15/18/21/56/62) ---
+  const isLocalNoida = (originQuery.toLowerCase().includes("noida") || destQuery.toLowerCase().includes("noida") ||
+    combined.includes("stadium") || combined.includes("mary") || combined.includes("amaltash") ||
+    combined.includes("sector 10") || combined.includes("sector 12") || combined.includes("sector 21") ||
+    combined.includes("sector 18") || combined.includes("sector 56") || combined.includes("sector 62")) &&
+    !combined.includes("gurgaon") && !combined.includes("airport") && !combined.includes("mumbai") && !combined.includes("bangalore");
+
+  if (isLocalNoida) {
+    return [
+      {
+        name: "BEST MATCH — via Captain Shashi Kant Marg & Amaltash Marg",
+        via: "via Captain Shashi Kant Marg, Amaltash Marg & Sector 21A Corridor"
+      },
+      {
+        name: "FASTEST — via Stadium Road & Master Plan Road 1",
+        via: "via Sector 10 Inner Road, Master Plan Road 1 & Stadium Gate 1"
+      },
+      {
+        name: "MORE COMFORTABLE — via Sector 12/22 Green Belt Avenue",
+        via: "via Sector 12 Green Belt Boulevard, Wide Sidewalks & Park Perimeter"
+      },
+      {
+        name: "MORE ACTIVE — via Sector 18 & Atta Market Commercial Link",
+        via: "via Maharaja Agrasen Marg, High Footfall Storefronts & Police Post"
+      }
+    ];
+  }
+
+  // --- CROSS-CITY DELHI-GURGAON / AIRPORT INTER-CITY EXPRESSWAYS ---
+  const isIntercityNCR = (combined.includes("airport") || combined.includes("t3") || combined.includes("igi") ||
+    (combined.includes("gurgaon") && combined.includes("delhi")) ||
+    (combined.includes("noida") && (combined.includes("gurgaon") || combined.includes("airport"))));
+
+  if (isIntercityNCR) {
     return [
       {
         name: "BEST MATCH — via DND Flyway & Ring Road Corridor",
@@ -292,8 +324,30 @@ export function getDynamicRouteNames(originQuery: string, destQuery: string) {
         via: "via Barapullah Flyover, Nelson Mandela Marg & Vasant Kunj Ave"
       },
       {
-        name: "MORE ACTIVE — via Laxmi Nagar & South Extension Commercial Hub",
+        name: "MORE ACTIVE — via Mathura Road & South Extension Commercial Hub",
         via: "via Mathura Road, Lajpat Nagar Market & AIIMS Flyover"
+      }
+    ];
+  }
+
+  // --- LOCAL GURUGRAM / GURGAON ---
+  if (combined.includes("gurgaon") || combined.includes("gurugram") || combined.includes("cyber city") || combined.includes("golf course")) {
+    return [
+      {
+        name: "BEST MATCH — via Golf Course Road & MG Road Boulevard",
+        via: "via Golf Course Rd, Sikanderpur Rapid Metro & MG Road Promenade"
+      },
+      {
+        name: "FASTEST — via Cyber City Elevated Link & NH-48 Service Lane",
+        via: "via DLF Cyber Hub Arterial Link & Shankar Chowk Flyover"
+      },
+      {
+        name: "MORE COMFORTABLE — via Sector 14/15 Guarded Residential Corridor",
+        via: "via Sector 14 Main Boulevard, Police Chowki & Gated Enclaves"
+      },
+      {
+        name: "MORE ACTIVE — via Sector 29 Commercial Market Hub",
+        via: "via Leisure Valley Road, Sector 29 Food Street & Huda City Metro"
       }
     ];
   }
@@ -389,7 +443,7 @@ export function getDynamicRouteNames(originQuery: string, destQuery: string) {
 export async function generateRealRoutes(
   originQuery: string, 
   destQuery: string,
-  travelMode: 'WALKING' | 'DRIVING' | 'BICYCLING' | 'TRANSIT' = 'WALKING'
+  travelMode: TravelMode | 'WALKING' | 'DRIVING' | 'BICYCLING' | 'TRANSIT' = 'CAB'
 ): Promise<RouteOption[]> {
   const originLoc = await geocodeLocationQuery(originQuery);
   // Pass originLoc coordinates as referenceLoc so destination fallback is ALWAYS in the SAME city!
@@ -398,8 +452,16 @@ export async function generateRealRoutes(
   let startCoord: [number, number] = [originLoc.lat, originLoc.lng];
   let endCoord: [number, number] = [destLoc.lat, destLoc.lng];
 
+  // Map user travelMode into routing engine modes
+  const isWalking = travelMode === 'WALKING';
+  const isTransit = travelMode === 'TRANSIT';
+  const isTwoWheeler = travelMode === 'TWO_WHEELER';
+  const isCabOrDrive = travelMode === 'CAB' || travelMode === 'DRIVING';
+
+  const geoapifyMode: 'walk' | 'transit' | 'drive' = 
+    isWalking ? 'walk' : isTransit ? 'transit' : 'drive';
+
   // 1. Primary Routing Engine: Fetch real Geoapify Routing API results
-  const geoapifyMode = travelMode === 'TRANSIT' ? 'transit' : travelMode === 'DRIVING' ? 'drive' : 'walk';
   const geoapifyRoute = await getGeoapifyRoute(
     startCoord[0],
     startCoord[1],
@@ -413,7 +475,7 @@ export async function generateRealRoutes(
     ? await getGoogleDirections(
         { lat: startCoord[0], lng: startCoord[1] },
         { lat: endCoord[0], lng: endCoord[1] },
-        travelMode
+        isWalking ? 'WALKING' : isTransit ? 'TRANSIT' : 'DRIVING'
       )
     : [];
 
@@ -441,11 +503,23 @@ export async function generateRealRoutes(
     ? googleRoutes[0].distanceKm
     : (airDistance > 0.3 ? parseFloat((airDistance * 1.35).toFixed(1)) : 2.5);
 
-  const baseMinutes = geoapifyRoute
-    ? geoapifyRoute.durationMinutes
-    : (googleRoutes && googleRoutes.length > 0)
-    ? googleRoutes[0].durationMinutes
-    : Math.max(5, Math.round(baseDistance * 1.85));
+  // Mode-accurate baseline duration calculation
+  let baseMinutes = 10;
+  if (isWalking) {
+    // Brisk walking in urban India ~5 km/h (12 mins per km)
+    baseMinutes = geoapifyRoute
+      ? Math.max(4, Math.round(geoapifyRoute.durationMinutes * 0.85)) // normalize slight Geoapify walking overestimation
+      : Math.max(4, Math.round(baseDistance * 12));
+  } else if (isCabOrDrive) {
+    // Urban Cab / Auto driving: ~2.5 to 3 mins per km in city traffic, minimum 5 mins
+    baseMinutes = Math.max(5, Math.round(baseDistance * 2.6) + 2);
+  } else if (isTwoWheeler) {
+    // Two-wheeler (Bike / Scooter / Rapido): nimble through city congestion
+    baseMinutes = Math.max(4, Math.round(baseDistance * 2.1) + 1);
+  } else if (isTransit) {
+    // Metro / Bus: transit stop wait time + ride time
+    baseMinutes = Math.max(8, Math.round(baseDistance * 2.8) + 6);
+  }
 
   // 4 Dynamic Geometries for 4 Route Options using Geoapify / Google polyline paths when available
   const route1_Coords = (geoapifyRoute && geoapifyRoute.coordinates.length > 2)
@@ -532,7 +606,7 @@ export async function generateRealRoutes(
       id: "route-fastest",
       name: routeNames[1].name,
       via: routeNames[1].via,
-      durationMinutes: Math.max(8, Math.round(baseMinutes * 0.85)),
+      durationMinutes: Math.max(3, Math.round(baseMinutes * 0.85)),
       distanceKm: parseFloat((baseDistance * 0.92).toFixed(1)),
       comfortScore: 8.8,
       color: "#1A73E8", // Google Blue for FASTEST

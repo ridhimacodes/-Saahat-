@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, MapPin, ChevronDown, ChevronUp, Sun, Sunset, Moon, Bus, Store, Shield, Sparkles, ArrowRight, AlertCircle, Eye, Share2, CheckCircle2, ShieldAlert, ThumbsUp, AlertTriangle, Compass, Download, HardDrive, Trash2 } from 'lucide-react';
-import { RouteOption, TimeOfDay } from '../types';
+import { Clock, MapPin, ChevronDown, ChevronUp, Sun, Sunset, Moon, Bus, Store, Shield, Sparkles, ArrowRight, AlertCircle, Eye, Share2, CheckCircle2, ShieldAlert, ThumbsUp, AlertTriangle, Compass, Download, HardDrive, Trash2, Car, Footprints, Bike } from 'lucide-react';
+import { RouteOption, TimeOfDay, TravelMode } from '../types';
 import { InteractiveMap } from './InteractiveMap';
 import { saveJourneyLocally, isRouteDownloaded, estimateStorageSize, getSavedJourneysLocally, deleteSavedJourneyLocally } from '../utils/offlineStorage';
 
@@ -18,6 +18,8 @@ interface RouteResultsPageProps {
   setTimeOfDay: (time: TimeOfDay) => void;
   isLowSignalGlobal: boolean;
   onNavigateToLowSignal?: () => void;
+  travelMode?: TravelMode;
+  onTravelModeChange?: (mode: TravelMode) => void;
 }
 
 export const RouteResultsPage: React.FC<RouteResultsPageProps> = ({
@@ -32,7 +34,9 @@ export const RouteResultsPage: React.FC<RouteResultsPageProps> = ({
   timeOfDay,
   setTimeOfDay,
   isLowSignalGlobal,
-  onNavigateToLowSignal
+  onNavigateToLowSignal,
+  travelMode = 'CAB',
+  onTravelModeChange
 }) => {
   const [expandedScoreId, setExpandedScoreId] = useState<string | null>(selectedRouteId);
   const selectedRoute = routes.find(r => r.id === selectedRouteId) || routes[0];
@@ -129,14 +133,73 @@ export const RouteResultsPage: React.FC<RouteResultsPageProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap shrink-0">
+          <div className="flex items-center gap-3 flex-wrap shrink-0">
+            {/* Travel Mode Toggle Bar */}
+            {onTravelModeChange && (
+              <div className={`flex items-center gap-1 p-1 rounded-2xl border ${
+                isLowSignalGlobal ? 'bg-slate-800 border-slate-700' : 'bg-[#F2E6E2]/80 border-[#E0D0C9]'
+              }`}>
+                <button
+                  onClick={() => onTravelModeChange('CAB')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
+                    travelMode === 'CAB'
+                      ? 'bg-[#A3526B] text-white shadow-xs'
+                      : isLowSignalGlobal ? 'text-slate-300 hover:text-white' : 'text-[#5E253B] hover:bg-white/50'
+                  }`}
+                  title="Cab / Auto"
+                >
+                  <Car className="w-3.5 h-3.5" />
+                  <span>Cab</span>
+                </button>
+
+                <button
+                  onClick={() => onTravelModeChange('WALKING')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
+                    travelMode === 'WALKING'
+                      ? 'bg-[#A3526B] text-white shadow-xs'
+                      : isLowSignalGlobal ? 'text-slate-300 hover:text-white' : 'text-[#5E253B] hover:bg-white/50'
+                  }`}
+                  title="Walking"
+                >
+                  <Footprints className="w-3.5 h-3.5" />
+                  <span>Walking</span>
+                </button>
+
+                <button
+                  onClick={() => onTravelModeChange('TWO_WHEELER')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
+                    travelMode === 'TWO_WHEELER'
+                      ? 'bg-[#A3526B] text-white shadow-xs'
+                      : isLowSignalGlobal ? 'text-slate-300 hover:text-white' : 'text-[#5E253B] hover:bg-white/50'
+                  }`}
+                  title="2-Wheeler / Bike"
+                >
+                  <Bike className="w-3.5 h-3.5" />
+                  <span>2-Wheeler</span>
+                </button>
+
+                <button
+                  onClick={() => onTravelModeChange('TRANSIT')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
+                    travelMode === 'TRANSIT'
+                      ? 'bg-[#A3526B] text-white shadow-xs'
+                      : isLowSignalGlobal ? 'text-slate-300 hover:text-white' : 'text-[#5E253B] hover:bg-white/50'
+                  }`}
+                  title="Bus / Metro Transit"
+                >
+                  <Bus className="w-3.5 h-3.5" />
+                  <span>Transit</span>
+                </button>
+              </div>
+            )}
+
             {downloadedRouteIds.length > 0 && onNavigateToLowSignal && (
               <button
                 onClick={onNavigateToLowSignal}
                 className="px-4 py-2 rounded-full text-xs font-extrabold bg-amber-400 hover:bg-amber-300 text-slate-950 border border-amber-500 shadow-sm transition-all flex items-center gap-1.5"
               >
                 <HardDrive className="w-3.5 h-3.5 text-slate-950" />
-                <span>View Downloaded Routes ({downloadedRouteIds.length})</span>
+                <span>View Downloaded ({downloadedRouteIds.length})</span>
               </button>
             )}
             <button

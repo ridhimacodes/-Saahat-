@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PageType, TimeOfDay, UserProfile, RouteOption, CommunityNote } from './types';
+import { PageType, TimeOfDay, UserProfile, RouteOption, CommunityNote, TravelMode } from './types';
 import { INITIAL_USER_PROFILE, MOCK_ROUTES, INITIAL_COMMUNITY_NOTES, TRUSTED_CONTACTS } from './data/mockData';
 import { Navbar } from './components/Navbar';
 import { HomePage } from './components/HomePage';
@@ -36,6 +36,7 @@ export function App() {
   // Search & Route State (Started empty by default as requested)
   const [origin, setOrigin] = useState("");
   const [destination, setDestination] = useState("");
+  const [travelMode, setTravelMode] = useState<TravelMode>('CAB');
   const [routes, setRoutes] = useState<RouteOption[]>(MOCK_ROUTES.default);
   const [selectedRouteId, setSelectedRouteId] = useState<string>("route-best");
 
@@ -103,18 +104,29 @@ export function App() {
   const timeEvaluatedRoutes = recalculateRouteScoresForTime(routes, timeOfDay);
   const selectedRoute = timeEvaluatedRoutes.find(r => r.id === selectedRouteId) || timeEvaluatedRoutes[0];
 
-  const handleSearchComplete = async (newOrigin: string, newDestination: string) => {
+  const handleSearchComplete = async (newOrigin: string, newDestination: string, newMode?: TravelMode) => {
     setOrigin(newOrigin);
     setDestination(newDestination);
+    const activeMode = newMode || travelMode;
+    if (newMode) setTravelMode(newMode);
     
-    // Dynamically calculate real routes and geocoded polylines
-    const computedRoutes = await generateRealRoutes(newOrigin, newDestination);
+    // Dynamically calculate real routes and geocoded polylines for the chosen travel mode
+    const computedRoutes = await generateRealRoutes(newOrigin, newDestination, activeMode);
     const scored = recalculateRouteScoresForTime(computedRoutes, timeOfDay);
     setRoutes(scored);
     if (scored.length > 0) {
       setSelectedRouteId(scored[0].id);
     }
     changePage('results');
+  };
+
+  const handleTravelModeChange = async (newMode: TravelMode) => {
+    setTravelMode(newMode);
+    if (origin && destination) {
+      const computedRoutes = await generateRealRoutes(origin, destination, newMode);
+      const scored = recalculateRouteScoresForTime(computedRoutes, timeOfDay);
+      setRoutes(scored);
+    }
   };
 
   const handleSelectAndShare = (route: RouteOption) => {
@@ -178,6 +190,8 @@ export function App() {
                 timeOfDay={timeOfDay}
                 setTimeOfDay={setTimeOfDay}
                 isLowSignalGlobal={isLowSignalGlobal}
+                travelMode={travelMode}
+                setTravelMode={setTravelMode}
               />
             )}
 
@@ -194,6 +208,8 @@ export function App() {
                 timeOfDay={timeOfDay}
                 setTimeOfDay={setTimeOfDay}
                 isLowSignalGlobal={isLowSignalGlobal}
+                travelMode={travelMode}
+                onTravelModeChange={handleTravelModeChange}
                 onNavigateToLowSignal={() => {
                   setIsLowSignalGlobal(true);
                   changePage('lowsignal');

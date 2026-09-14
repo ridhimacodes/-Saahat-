@@ -2,6 +2,8 @@ export type PageType = 'home' | 'search' | 'results' | 'share' | 'community' | '
 
 export type TimeOfDay = 'day' | 'evening' | 'night' | 'lateNight';
 
+export type TravelMode = 'CAB' | 'WALKING' | 'TRANSIT' | 'TWO_WHEELER';
+
 export interface RouteConditionIcon {
   type: 'streetlight' | 'shop' | 'transit' | 'cctv' | 'footfall' | 'police';
   label: string;

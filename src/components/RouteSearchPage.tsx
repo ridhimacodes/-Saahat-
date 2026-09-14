@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowUpDown, LocateFixed, Search, X, MapPin, Sparkles, Clock, AlertCircle, Sun, Sunset, Moon, ArrowLeft } from 'lucide-react';
-import { TimeOfDay } from '../types';
+import { ArrowUpDown, LocateFixed, Search, X, MapPin, Sparkles, Clock, AlertCircle, Sun, Sunset, Moon, ArrowLeft, Car, Footprints, Bus, Bike } from 'lucide-react';
+import { TimeOfDay, TravelMode } from '../types';
 import { searchLocations, GeocodingResult } from '../services/geocoding';
 import { 
   getGeoapifyAutocomplete, 
@@ -18,11 +18,13 @@ import {
 } from '../services/googleMapsService';
 
 interface RouteSearchPageProps {
-  onSearchComplete: (origin: string, destination: string) => void;
+  onSearchComplete: (origin: string, destination: string, travelMode?: TravelMode) => void;
   onBack?: () => void;
   timeOfDay: TimeOfDay;
   setTimeOfDay: (time: TimeOfDay) => void;
   isLowSignalGlobal?: boolean;
+  travelMode?: TravelMode;
+  setTravelMode?: (mode: TravelMode) => void;
 }
 
 const POPULAR_SUGGESTIONS: GeocodingResult[] = [
@@ -39,8 +41,11 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
   onBack,
   timeOfDay,
   setTimeOfDay,
-  isLowSignalGlobal = false
+  isLowSignalGlobal = false,
+  travelMode = 'CAB',
+  setTravelMode
 }) => {
+  const [selectedTravelMode, setSelectedTravelMode] = useState<TravelMode>(travelMode);
   const [originTitle, setOriginTitle] = useState("");
   const [originAddress, setOriginAddress] = useState("");
   const [selectedOriginPlace, setSelectedOriginPlace] = useState<GooglePlaceResult | null>(null);
@@ -407,7 +412,10 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
 
     setTimeout(() => {
       setIsSearching(false);
-      onSearchComplete(fullOrigin, fullDest);
+      if (setTravelMode) {
+        setTravelMode(selectedTravelMode);
+      }
+      onSearchComplete(fullOrigin, fullDest, selectedTravelMode);
     }, 600);
   };
 
@@ -487,6 +495,66 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
 
           <form onSubmit={handleSubmit} className="space-y-5">
             
+            {/* Travel Mode Switcher */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold tracking-widest text-[#7E5767] uppercase ml-1">
+                TRAVEL MODE
+              </label>
+              <div className="grid grid-cols-4 gap-2 bg-[#F2E6E2]/80 p-1.5 rounded-2xl border border-[#E0D0C9]">
+                <button
+                  type="button"
+                  onClick={() => setSelectedTravelMode('CAB')}
+                  className={`py-2 px-2 sm:px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                    selectedTravelMode === 'CAB'
+                      ? 'bg-[#A3526B] text-white shadow-sm'
+                      : 'text-[#5E253B] hover:bg-white/60'
+                  }`}
+                >
+                  <Car className="w-3.5 h-3.5 shrink-0" />
+                  <span>Cab / Auto</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedTravelMode('WALKING')}
+                  className={`py-2 px-2 sm:px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                    selectedTravelMode === 'WALKING'
+                      ? 'bg-[#A3526B] text-white shadow-sm'
+                      : 'text-[#5E253B] hover:bg-white/60'
+                  }`}
+                >
+                  <Footprints className="w-3.5 h-3.5 shrink-0" />
+                  <span>Walking</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedTravelMode('TWO_WHEELER')}
+                  className={`py-2 px-2 sm:px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                    selectedTravelMode === 'TWO_WHEELER'
+                      ? 'bg-[#A3526B] text-white shadow-sm'
+                      : 'text-[#5E253B] hover:bg-white/60'
+                  }`}
+                >
+                  <Bike className="w-3.5 h-3.5 shrink-0" />
+                  <span>2-Wheeler</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedTravelMode('TRANSIT')}
+                  className={`py-2 px-2 sm:px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                    selectedTravelMode === 'TRANSIT'
+                      ? 'bg-[#A3526B] text-white shadow-sm'
+                      : 'text-[#5E253B] hover:bg-white/60'
+                  }`}
+                >
+                  <Bus className="w-3.5 h-3.5 shrink-0" />
+                  <span>Transit</span>
+                </button>
+              </div>
+            </div>
+
             {/* FROM Input Box */}
             <div ref={originContainerRef} className="relative z-30 space-y-1.5">
               <label className="block text-xs font-bold tracking-widest text-[#7E5767] uppercase ml-1">
