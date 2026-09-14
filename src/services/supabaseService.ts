@@ -145,6 +145,55 @@ export async function addEmergencyContact(contact: Omit<TrustedContact, 'id'>): 
     return null;
   }
 }
+export async function updateEmergencyContact(id: string, contact: Partial<Omit<TrustedContact, 'id'>>): Promise<boolean> {
+  if (!isSupabaseConfigured || !supabase) {
+    return true;
+  }
+
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return false;
+
+    const { error } = await supabase
+      .from('emergency_contacts')
+      .update({
+        ...(contact.name ? { name: contact.name } : {}),
+        ...(contact.phone ? { phone: contact.phone } : {}),
+        ...(contact.relationship ? { relationship: contact.relationship } : {}),
+        ...(contact.avatarBg ? { avatar_bg: contact.avatarBg } : {}),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .eq('user_id', user.id);
+
+    return !error;
+  } catch (err) {
+    console.warn('Supabase updateEmergencyContact error:', err);
+    return false;
+  }
+}
+
+export async function deleteEmergencyContact(id: string): Promise<boolean> {
+  if (!isSupabaseConfigured || !supabase) {
+    return true;
+  }
+
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return false;
+
+    const { error } = await supabase
+      .from('emergency_contacts')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', user.id);
+
+    return !error;
+  } catch (err) {
+    console.warn('Supabase deleteEmergencyContact error:', err);
+    return false;
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Community Notes Service Layer
