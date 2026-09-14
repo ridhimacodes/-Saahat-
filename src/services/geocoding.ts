@@ -1,3 +1,8 @@
+import { 
+  GEOAPIFY_GEOCODING_API_KEY, 
+  GEOAPIFY_REVERSE_GEOCODING_API_KEY 
+} from '../config/maps';
+
 export interface GeocodingResult {
   placeId: string;
   displayName: string;
@@ -72,11 +77,32 @@ const FAMOUS_INDIAN_PLACES: Record<string, GeocodingResult> = {
   "gachibowli": { placeId: "hyd-3", displayName: "Gachibowli Financial District, Hyderabad", title: "Gachibowli", address: "Gachibowli, Hyderabad, Telangana 500032, India", lat: 17.4401, lng: 78.3489 }
 };
 
-export async function searchLocations(query: string): Promise<GeocodingResult[]> {
+export async function searchLocations(query: string, userCoords?: { lat: number; lng: number }): Promise<GeocodingResult[]> {
   if (!query || query.trim().length < 2) return [];
   const cleanQuery = query.trim().toLowerCase().replace(/[,.-]/g, ' ');
 
-  // 1. First, search live OpenStreetMap (Nominatim) for exact places, schools, stadiums, landmarks, roads, and sectors
+  // 1. Primary: Search Geoapify Geocoding API (Fast, accurate, handles small landmarks, colonies, sectors across India)
+  try {
+    const geoapifyUrl = `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(query.trim())}&filter=countrycode:in&limit=8&format=json&apiKey=${GEOAPIFY_GEOCODING_API_KEY}${userCoords?.lat ? `&bias=proximity:${userCoords.lng},${userCoords.lat}` : ''}`;
+    const geoapifyRes = await fetch(geoapifyUrl);
+    if (geoapifyRes.ok) {
+      const geoapifyData = await geoapifyRes.json();
+      if (geoapifyData.results && geoapifyData.results.length > 0) {
+        return geoapifyData.results.map((item: any) => ({
+          placeId: item.place_id || `geo-${item.lat}-${item.lon}`,
+          displayName: item.formatted,
+          title: item.name || item.address_line1 || item.formatted?.split(',')[0] || query,
+          address: item.formatted || item.address_line2 || '',
+          lat: item.lat,
+          lng: item.lon
+        }));
+      }
+    }
+  } catch (err) {
+    console.warn('Geoapify search fallback to Nominatim:', err);
+  }
+
+  // 2. Secondary fallback: Search live OpenStreetMap (Nominatim)
   try {
     const fetchOSM = async (searchQ: string) => {
       const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQ)}&countrycodes=in&limit=6&addressdetails=1`;
@@ -94,11 +120,9 @@ export async function searchLocations(query: string): Promise<GeocodingResult[]>
 
     // If query has specific words or commas that might be too strict, try relaxed variations
     if (!data || data.length === 0) {
-      // Try with ', India'
       data = await fetchOSM(query + ', India');
     }
 
-    // Try subparts if commas exist (e.g. "Alliance World School, Sector 56, Noida" -> "Sector 56, Noida")
     if (!data || data.length === 0) {
       const commaParts = query.split(',').map(s => s.trim()).filter(Boolean);
       if (commaParts.length > 1) {
@@ -110,7 +134,6 @@ export async function searchLocations(query: string): Promise<GeocodingResult[]>
       }
     }
 
-    // Try removing organizational/suffix words from end if nothing matched
     if (!data || data.length === 0) {
       const words = query.trim().split(/\s+/).filter(Boolean);
       if (words.length > 2) {
@@ -142,14 +165,13 @@ export async function searchLocations(query: string): Promise<GeocodingResult[]>
     console.error('Geocoding live search failed, falling back to local database:', error);
   }
 
-  // 2. Check local Indian landmarks dictionary for exact or token matches
+  // 3. Check local Indian landmarks dictionary for exact or token matches
   const matches: GeocodingResult[] = [];
   const addedIds = new Set<string>();
   const queryTokens = cleanQuery.split(/\s+/).filter(t => t.length > 1);
 
   for (const [key, val] of Object.entries(FAMOUS_INDIAN_PLACES)) {
     const keyClean = key.replace(/[,.-]/g, ' ');
-    // Only exact key match or when cleanQuery is a prefix/exact match of the landmark
     if (cleanQuery === keyClean || (keyClean.startsWith(cleanQuery) && cleanQuery.length >= 3)) {
       if (!addedIds.has(val.placeId)) {
         matches.push(val);
@@ -165,7 +187,7 @@ export async function searchLocations(query: string): Promise<GeocodingResult[]>
 
   if (matches.length > 0) return matches;
 
-  // 3. Fallback: Allow any typed place to be used as a custom point using default coordinates or Delhi NCR center
+  // 4. Fallback: Allow any typed place to be used as a custom point using Delhi NCR center
   return [{
     placeId: `custom-${Date.now()}`,
     displayName: `${query.trim()}, India`,
@@ -177,6 +199,21 @@ export async function searchLocations(query: string): Promise<GeocodingResult[]>
 }
 
 export async function reverseGeocode(lat: number, lng: number): Promise<string | null> {
+  // 1. Primary: Geoapify Reverse Geocoding API
+  try {
+    const geoapifyUrl = `https://api.geoapify.com/v1/geocode/reverse?lat=${lat}&lon=${lng}&format=json&apiKey=${GEOAPIFY_REVERSE_GEOCODING_API_KEY}`;
+    const res = await fetch(geoapifyUrl);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.results && data.results.length > 0) {
+        return data.results[0].formatted || data.results[0].address_line1 || null;
+      }
+    }
+  } catch (err) {
+    console.warn('Geoapify reverse geocoding fallback to Nominatim:', err);
+  }
+
+  // 2. Secondary fallback: Nominatim
   try {
     const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`;
     const response = await fetch(url, {

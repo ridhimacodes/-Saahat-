@@ -1,6 +1,10 @@
 import { RouteOption, RouteConditionIcon, RouteHighlight } from '../types';
 import { searchLocations } from './geocoding';
 import { 
+  getGeoapifyRoute, 
+  geocodeGeoapifyAddress 
+} from './geoapifyService';
+import { 
   getGoogleDirections, 
   getGooglePlaceDetails, 
   geocodeGoogleAddress 
@@ -152,7 +156,21 @@ export async function geocodeLocationQuery(query: string, referenceLoc?: [number
     };
   }
 
-  // 3. Try Google Geocoder API
+  // 3. Try Geoapify Geocoder API (with validated API key)
+  try {
+    const geoapifyGeocoded = await geocodeGeoapifyAddress(cleanQuery);
+    if (geoapifyGeocoded && geoapifyGeocoded.lat && geoapifyGeocoded.lng) {
+      return {
+        name: geoapifyGeocoded.name || cleanQuery.split('(')[0].trim(),
+        lat: geoapifyGeocoded.lat,
+        lng: geoapifyGeocoded.lng
+      };
+    }
+  } catch (err) {
+    console.warn("Geoapify geocoding error:", err);
+  }
+
+  // 4. Try Google Geocoder API
   try {
     const googleGeocoded = await geocodeGoogleAddress(cleanQuery);
     if (googleGeocoded && googleGeocoded.lat && googleGeocoded.lng) {
@@ -380,12 +398,24 @@ export async function generateRealRoutes(
   let startCoord: [number, number] = [originLoc.lat, originLoc.lng];
   let endCoord: [number, number] = [destLoc.lat, destLoc.lng];
 
-  // Try fetching real Google Directions API results!
-  const googleRoutes = await getGoogleDirections(
-    { lat: startCoord[0], lng: startCoord[1] },
-    { lat: endCoord[0], lng: endCoord[1] },
-    travelMode
+  // 1. Primary Routing Engine: Fetch real Geoapify Routing API results
+  const geoapifyMode = travelMode === 'TRANSIT' ? 'transit' : travelMode === 'DRIVING' ? 'drive' : 'walk';
+  const geoapifyRoute = await getGeoapifyRoute(
+    startCoord[0],
+    startCoord[1],
+    endCoord[0],
+    endCoord[1],
+    geoapifyMode
   );
+
+  // 2. Secondary Routing Engine: Try Google Directions API
+  const googleRoutes = (!geoapifyRoute || !geoapifyRoute.coordinates.length)
+    ? await getGoogleDirections(
+        { lat: startCoord[0], lng: startCoord[1] },
+        { lat: endCoord[0], lng: endCoord[1] },
+        travelMode
+      )
+    : [];
 
   let airDistance = calculateHaversineDistance(startCoord[0], startCoord[1], endCoord[0], endCoord[1]);
 
@@ -399,27 +429,35 @@ export async function generateRealRoutes(
     (lowerOrig.includes('bengaluru') && lowerDest.includes('chennai'))
   );
 
-  if (airDistance > 120 && !isExplicitInterCity && (!googleRoutes || googleRoutes.length === 0)) {
+  if (airDistance > 120 && !isExplicitInterCity && !geoapifyRoute && (!googleRoutes || googleRoutes.length === 0)) {
     endCoord = [startCoord[0] + 0.025, startCoord[1] + 0.020];
     airDistance = calculateHaversineDistance(startCoord[0], startCoord[1], endCoord[0], endCoord[1]);
   }
 
-  // Use Google Routes API distance & duration if available, else calculated distance
-  const baseDistance = (googleRoutes && googleRoutes.length > 0)
+  // Use Geoapify or Google Routes API distance & duration if available, else calculated distance
+  const baseDistance = geoapifyRoute
+    ? geoapifyRoute.distanceKm
+    : (googleRoutes && googleRoutes.length > 0)
     ? googleRoutes[0].distanceKm
     : (airDistance > 0.3 ? parseFloat((airDistance * 1.35).toFixed(1)) : 2.5);
 
-  const baseMinutes = (googleRoutes && googleRoutes.length > 0)
+  const baseMinutes = geoapifyRoute
+    ? geoapifyRoute.durationMinutes
+    : (googleRoutes && googleRoutes.length > 0)
     ? googleRoutes[0].durationMinutes
     : Math.max(5, Math.round(baseDistance * 1.85));
 
-  // 4 Dynamic Geometries for 4 Route Options using Google polyline paths when available
-  const route1_Coords = (googleRoutes[0] && googleRoutes[0].coordinates.length > 2)
+  // 4 Dynamic Geometries for 4 Route Options using Geoapify / Google polyline paths when available
+  const route1_Coords = (geoapifyRoute && geoapifyRoute.coordinates.length > 2)
+    ? geoapifyRoute.coordinates
+    : (googleRoutes[0] && googleRoutes[0].coordinates.length > 2)
     ? googleRoutes[0].coordinates
     : generateCurvedPolyline(startCoord, endCoord, 0.04);
 
   const route2_Coords = (googleRoutes[1] && googleRoutes[1].coordinates.length > 2)
     ? googleRoutes[1].coordinates
+    : (geoapifyRoute && geoapifyRoute.coordinates.length > 2)
+    ? geoapifyRoute.coordinates
     : (googleRoutes[0] && googleRoutes[0].coordinates.length > 2
         ? googleRoutes[0].coordinates
         : generateCurvedPolyline(startCoord, endCoord, -0.05));

@@ -4,6 +4,10 @@ import { ArrowUpDown, LocateFixed, Search, X, MapPin, Sparkles, Clock, AlertCirc
 import { TimeOfDay } from '../types';
 import { searchLocations, GeocodingResult } from '../services/geocoding';
 import { 
+  getGeoapifyAutocomplete, 
+  geocodeGeoapifyAddress 
+} from '../services/geoapifyService';
+import { 
   getGooglePlacePredictions, 
   getGooglePlaceDetails, 
   geocodeGoogleAddress,
@@ -121,11 +125,28 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
     setSelectedDestPlace(tempPlace);
   };
 
-  // Google Places Autocomplete predictions for FROM field
+  // Primary: Geoapify Autocomplete predictions for FROM field
   useEffect(() => {
     const timer = setTimeout(async () => {
       if (showOriginDropdown) {
         if (originTitle.trim().length >= 1) {
+          // 1. Try Geoapify Autocomplete
+          const geoapifyItems = await getGeoapifyAutocomplete(originTitle, userCoords || undefined);
+          if (geoapifyItems && geoapifyItems.length > 0) {
+            setOriginSuggestions(
+              geoapifyItems.map((item) => ({
+                placeId: item.placeId,
+                displayName: item.formatted,
+                title: item.name,
+                address: item.addressLine2 || item.formatted,
+                lat: item.lat,
+                lng: item.lng
+              }))
+            );
+            return;
+          }
+
+          // 2. Secondary: Google Place Predictions
           const resp = await getGooglePlacePredictions(originTitle, userCoords || undefined);
           if (resp && resp.predictions && resp.predictions.length > 0) {
             setOriginSuggestions(
@@ -140,7 +161,9 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
             );
             return;
           }
-          const fallbackResults = await searchLocations(originTitle);
+
+          // 3. Fallback: Search locations (Geoapify search + OSM)
+          const fallbackResults = await searchLocations(originTitle, userCoords || undefined);
           setOriginSuggestions(fallbackResults);
         } else {
           setOriginSuggestions(POPULAR_SUGGESTIONS);
@@ -148,15 +171,32 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
       } else {
         setOriginSuggestions([]);
       }
-    }, 200);
+    }, 150);
     return () => clearTimeout(timer);
   }, [originTitle, showOriginDropdown, userCoords]);
 
-  // Google Places Autocomplete predictions for TO field
+  // Primary: Geoapify Autocomplete predictions for TO field
   useEffect(() => {
     const timer = setTimeout(async () => {
       if (showDestDropdown) {
         if (destTitle.trim().length >= 1) {
+          // 1. Try Geoapify Autocomplete
+          const geoapifyItems = await getGeoapifyAutocomplete(destTitle, userCoords || undefined);
+          if (geoapifyItems && geoapifyItems.length > 0) {
+            setDestSuggestions(
+              geoapifyItems.map((item) => ({
+                placeId: item.placeId,
+                displayName: item.formatted,
+                title: item.name,
+                address: item.addressLine2 || item.formatted,
+                lat: item.lat,
+                lng: item.lng
+              }))
+            );
+            return;
+          }
+
+          // 2. Secondary: Google Place Predictions
           const resp = await getGooglePlacePredictions(destTitle, userCoords || undefined);
           if (resp && resp.predictions && resp.predictions.length > 0) {
             setDestSuggestions(
@@ -171,7 +211,9 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
             );
             return;
           }
-          const fallbackResults = await searchLocations(destTitle);
+
+          // 3. Fallback: Search locations (Geoapify search + OSM)
+          const fallbackResults = await searchLocations(destTitle, userCoords || undefined);
           setDestSuggestions(fallbackResults);
         } else {
           setDestSuggestions(POPULAR_SUGGESTIONS);
@@ -179,7 +221,7 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
       } else {
         setDestSuggestions([]);
       }
-    }, 200);
+    }, 150);
     return () => clearTimeout(timer);
   }, [destTitle, showDestDropdown, userCoords]);
 
@@ -288,20 +330,33 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
     // Resolve origin place details if not already selected
     let finalOriginObj = selectedOriginPlace;
     if (!finalOriginObj || finalOriginObj.name !== originTitle) {
-      const geocoded = await geocodeGoogleAddress(originTitle + (originAddress ? `, ${originAddress}` : ''), userCoords || undefined);
-      if (geocoded) {
-        finalOriginObj = geocoded;
+      // 1. Try Geoapify Geocoding
+      const geoapifyGeocoded = await geocodeGeoapifyAddress(originTitle + (originAddress ? `, ${originAddress}` : ''), userCoords || undefined);
+      if (geoapifyGeocoded) {
+        finalOriginObj = {
+          placeId: `geo-${geoapifyGeocoded.lat}-${geoapifyGeocoded.lng}`,
+          name: geoapifyGeocoded.name,
+          address: geoapifyGeocoded.formatted,
+          displayName: geoapifyGeocoded.formatted,
+          lat: geoapifyGeocoded.lat,
+          lng: geoapifyGeocoded.lng
+        };
       } else {
-        const fallback = await searchLocations(originTitle);
-        if (fallback && fallback.length > 0) {
-          finalOriginObj = {
-            placeId: fallback[0].placeId,
-            name: fallback[0].title,
-            address: fallback[0].address,
-            displayName: fallback[0].displayName,
-            lat: fallback[0].lat,
-            lng: fallback[0].lng
-          };
+        const geocoded = await geocodeGoogleAddress(originTitle + (originAddress ? `, ${originAddress}` : ''), userCoords || undefined);
+        if (geocoded) {
+          finalOriginObj = geocoded;
+        } else {
+          const fallback = await searchLocations(originTitle, userCoords || undefined);
+          if (fallback && fallback.length > 0) {
+            finalOriginObj = {
+              placeId: fallback[0].placeId,
+              name: fallback[0].title,
+              address: fallback[0].address,
+              displayName: fallback[0].displayName,
+              lat: fallback[0].lat,
+              lng: fallback[0].lng
+            };
+          }
         }
       }
     }
@@ -309,27 +364,40 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
     // Resolve destination place details if not already selected
     let finalDestObj = selectedDestPlace;
     if (!finalDestObj || finalDestObj.name !== destTitle) {
-      const geocoded = await geocodeGoogleAddress(destTitle + (destAddress ? `, ${destAddress}` : ''), userCoords || undefined);
-      if (geocoded) {
-        finalDestObj = geocoded;
+      // 1. Try Geoapify Geocoding
+      const geoapifyGeocoded = await geocodeGeoapifyAddress(destTitle + (destAddress ? `, ${destAddress}` : ''), userCoords || undefined);
+      if (geoapifyGeocoded) {
+        finalDestObj = {
+          placeId: `geo-${geoapifyGeocoded.lat}-${geoapifyGeocoded.lng}`,
+          name: geoapifyGeocoded.name,
+          address: geoapifyGeocoded.formatted,
+          displayName: geoapifyGeocoded.formatted,
+          lat: geoapifyGeocoded.lat,
+          lng: geoapifyGeocoded.lng
+        };
       } else {
-        const fallback = await searchLocations(destTitle);
-        if (fallback && fallback.length > 0) {
-          finalDestObj = {
-            placeId: fallback[0].placeId,
-            name: fallback[0].title,
-            address: fallback[0].address,
-            displayName: fallback[0].displayName,
-            lat: fallback[0].lat,
-            lng: fallback[0].lng
-          };
+        const geocoded = await geocodeGoogleAddress(destTitle + (destAddress ? `, ${destAddress}` : ''), userCoords || undefined);
+        if (geocoded) {
+          finalDestObj = geocoded;
+        } else {
+          const fallback = await searchLocations(destTitle, userCoords || undefined);
+          if (fallback && fallback.length > 0) {
+            finalDestObj = {
+              placeId: fallback[0].placeId,
+              name: fallback[0].title,
+              address: fallback[0].address,
+              displayName: fallback[0].displayName,
+              lat: fallback[0].lat,
+              lng: fallback[0].lng
+            };
+          }
         }
       }
     }
 
     if (!finalOriginObj || !finalDestObj || (!finalOriginObj.lat && !finalOriginObj.address)) {
       setIsSearching(false);
-      setSearchError("No precise location found. Please select a valid Google Place from suggestions.");
+      setSearchError("No precise location found. Please select a suggestion from the dropdown.");
       return;
     }
 
@@ -380,7 +448,7 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
             </p>
           </div>
 
-          {/* Live Google Places API Debug Banner */}
+          {/* Places API Status / Debug Banner (hidden if dismissed or inactive) */}
           {apiDebug && (
             <div className={`p-3.5 rounded-2xl text-xs font-mono border flex items-start justify-between gap-3 ${
               apiDebug.status === 'OK'
@@ -392,7 +460,7 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
               <div className="space-y-1 flex-1">
                 <div className="flex items-center gap-2 font-bold">
                   <span className={`inline-block w-2 h-2 rounded-full ${apiDebug.status === 'OK' ? 'bg-emerald-500' : apiDebug.status === 'ZERO_RESULTS' ? 'bg-amber-500' : 'bg-rose-500'}`} />
-                  <span>Google Places API: [{apiDebug.status}]</span>
+                  <span>Places API: [{apiDebug.status}]</span>
                   <span className="text-[10px] text-slate-500 font-normal">({apiDebug.timestamp})</span>
                 </div>
                 <div className="text-[11px] leading-relaxed break-words opacity-90">

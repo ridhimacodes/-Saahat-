@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { MapContainer, TileLayer, Polyline, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { RouteOption } from '../types';
+import { GEOAPIFY_MAP_TILES_API_KEY, MAP_API_CONFIG } from '../config/maps';
 import { 
   Navigation, 
   Compass, 
@@ -304,8 +305,18 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
         return "https://mt1.google.com/vt/lyrs=m@221000000,traffic&x={x}&y={y}&z={z}";
       case 'standard':
       default:
-        return "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}";
+        // Use Geoapify Map Tiles API key
+        return GEOAPIFY_MAP_TILES_API_KEY
+          ? `https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}.png?apiKey=${GEOAPIFY_MAP_TILES_API_KEY}`
+          : "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}";
     }
+  };
+
+  const getTileAttribution = () => {
+    if (mapType === 'standard' && GEOAPIFY_MAP_TILES_API_KEY) {
+      return MAP_API_CONFIG.mapTiles.attribution;
+    }
+    return '&copy; Google Maps';
   };
 
   return (
@@ -372,13 +383,12 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
         scrollWheelZoom={true}
         className="w-full h-full"
       >
-        {/* Google Maps Layer Tiles */}
+        {/* Map Layer Tiles */}
         <TileLayer 
           key={mapType}
           url={getTileUrl()} 
           maxZoom={20}
-          subdomains={['mt0', 'mt1', 'mt2', 'mt3']}
-          attribution="&copy; Google Maps"
+          attribution={getTileAttribution()}
         />
 
         <GoogleMapControls 
