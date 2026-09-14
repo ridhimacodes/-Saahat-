@@ -1,8 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowUpDown, LocateFixed, Search, X, MapPin, Sparkles, Clock, AlertCircle, Sun, Sunset, Moon, ArrowLeft, Car, Footprints, Bus, Bike } from 'lucide-react';
+import { ArrowUpDown, LocateFixed, Search, X, MapPin, Sparkles, Clock, AlertCircle, Sun, Sunset, Moon, ArrowLeft, Car, Footprints, Bus, Bike, History, Trash2 } from 'lucide-react';
 import { TimeOfDay, TravelMode } from '../types';
 import { searchLocations, GeocodingResult } from '../services/geocoding';
+import { 
+  getSearchHistory, 
+  addSearchHistory, 
+  clearSearchHistory, 
+  removeSearchHistoryItem, 
+  SearchHistoryItem 
+} from '../services/historyService';
 import { 
   getGeoapifyAutocomplete, 
   geocodeGeoapifyAddress 
@@ -53,6 +60,8 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
   const [destTitle, setDestTitle] = useState("");
   const [destAddress, setDestAddress] = useState("");
   const [selectedDestPlace, setSelectedDestPlace] = useState<GooglePlaceResult | null>(null);
+
+  const [searchHistoryList, setSearchHistoryList] = useState<SearchHistoryItem[]>(() => getSearchHistory());
 
   const [isSearching, setIsSearching] = useState(false);
   const [isLocatingUser, setIsLocatingUser] = useState(false);
@@ -410,6 +419,10 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
     const fullOrigin = `${finalOriginObj.name} (${finalOriginObj.lat.toFixed(6)}, ${finalOriginObj.lng.toFixed(6)}) [placeId:${finalOriginObj.placeId}]`;
     const fullDest = `${finalDestObj.name} (${finalDestObj.lat.toFixed(6)}, ${finalDestObj.lng.toFixed(6)}) [placeId:${finalDestObj.placeId}]`;
 
+    // Save strictly to Search History (never displayed as current route until submitted)
+    const updatedHistory = addSearchHistory(finalOriginObj.name, finalDestObj.name, selectedTravelMode);
+    setSearchHistoryList(updatedHistory);
+
     setTimeout(() => {
       setIsSearching(false);
       if (setTravelMode) {
@@ -417,6 +430,16 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
       }
       onSearchComplete(fullOrigin, fullDest, selectedTravelMode);
     }, 600);
+  };
+
+  const handleSelectHistoryItem = (item: SearchHistoryItem) => {
+    setOriginTitle(item.origin);
+    setOriginAddress('');
+    setDestTitle(item.destination);
+    setDestAddress('');
+    if (item.travelMode && (item.travelMode === 'CAB' || item.travelMode === 'WALKING' || item.travelMode === 'TWO_WHEELER' || item.travelMode === 'TRANSIT')) {
+      setSelectedTravelMode(item.travelMode as TravelMode);
+    }
   };
 
   return (
@@ -746,9 +769,85 @@ export const RouteSearchPage: React.FC<RouteSearchPageProps> = ({
                 )}
               </button>
             </div>
-
           </form>
         </motion.div>
+
+        {/* Search History Section - Only place where previous searches exist once removed */}
+        {searchHistoryList.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={`rounded-3xl p-6 border shadow-sm space-y-3 ${
+              isLowSignalGlobal
+                ? 'bg-slate-900 border-slate-800 text-slate-100'
+                : 'bg-white border-[#E8D8D3]'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <History className={`w-4 h-4 ${isLowSignalGlobal ? 'text-amber-400' : 'text-[#A3526B]'}`} />
+                <h3 className={`font-bold text-sm ${isLowSignalGlobal ? 'text-white' : 'text-[#3E1627]'}`}>
+                  Search History
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  clearSearchHistory();
+                  setSearchHistoryList([]);
+                }}
+                className={`text-[11px] font-semibold hover:underline flex items-center gap-1 ${
+                  isLowSignalGlobal ? 'text-slate-400 hover:text-rose-400' : 'text-slate-500 hover:text-rose-600'
+                }`}
+              >
+                <Trash2 className="w-3 h-3" />
+                <span>Clear History</span>
+              </button>
+            </div>
+
+            <div className="space-y-2 pt-1">
+              {searchHistoryList.map((item) => (
+                <div
+                  key={item.id}
+                  onClick={() => handleSelectHistoryItem(item)}
+                  className={`p-3 rounded-2xl border text-xs flex items-center justify-between cursor-pointer transition-all ${
+                    isLowSignalGlobal
+                      ? 'bg-slate-950/60 border-slate-800 hover:border-amber-400/50 text-slate-200'
+                      : 'bg-[#FAF5F1]/80 border-[#E8D8D3] hover:border-[#A3526B]/50 hover:bg-white text-[#3E1627]'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 truncate flex-1 mr-3">
+                    <Clock className={`w-3.5 h-3.5 shrink-0 ${isLowSignalGlobal ? 'text-slate-500' : 'text-slate-400'}`} />
+                    <span className="font-bold truncate">{item.origin}</span>
+                    <span className={`text-[11px] shrink-0 ${isLowSignalGlobal ? 'text-amber-400' : 'text-[#A3526B]'}`}>→</span>
+                    <span className="font-bold truncate">{item.destination}</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full shrink-0 font-bold ml-1 ${
+                      isLowSignalGlobal ? 'bg-slate-800 text-amber-300' : 'bg-[#F2E6E2] text-[#5E253B]'
+                    }`}>
+                      {item.travelMode || 'CAB'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-[10px] text-slate-400">{item.searchedAt}</span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const updated = removeSearchHistoryItem(item.id);
+                        setSearchHistoryList(updated);
+                      }}
+                      className="p-1 text-slate-400 hover:text-rose-600 rounded transition-colors"
+                      title="Remove from history"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
 
       </div>
     </div>

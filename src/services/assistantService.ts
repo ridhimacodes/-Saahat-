@@ -190,9 +190,12 @@ function getLocalAssistantResponse(
     const routeMention = selectedRoute
       ? ` Right now you are exploring "${selectedRoute.name.split('—')[0].trim()}" with a Comfort Score of ${selectedRoute.comfortScore.toFixed(1)}/10.`
       : " You can search for routes between any two points to see comfort ratings and safety highlights.";
+    const defaultReplies = selectedRoute
+      ? ["Why is this route the best match?", "What does Low Signal Mode do?", "What's in my Circle?", "General night safety tips"]
+      : ["What does Low Signal Mode do?", "What's in my Circle?", "How does Share ETA work?", "General night safety tips"];
     return {
       text: `Hi, I'm Saarthi — your journey guide. Ask me anything about your route or the app.${routeMention} I can explain route comfort scores, street lighting, open shops along your path, and show you how features like Low Signal Mode, Share ETA, and Community Notes work.`,
-      quickReplies: ["Why is this route the best match?", "What does Low Signal Mode do?", "What's in my Circle?", "General night safety tips"]
+      quickReplies: defaultReplies
     };
   }
 
@@ -200,7 +203,9 @@ function getLocalAssistantResponse(
   if (q.includes("thank") || q.includes("thanks") || q.includes("awesome") || q.includes("helpful") || q.includes("great job")) {
     return {
       text: "You're very welcome! Stay alert, trust your instincts, and feel free to ask anytime you want to check lighting, transit spots, or route conditions.",
-      quickReplies: ["Why is this route the best match?", "How does Share ETA work?", "What does Low Signal Mode do?"]
+      quickReplies: selectedRoute
+        ? ["Why is this route the best match?", "How does Share ETA work?", "What does Low Signal Mode do?"]
+        : ["What does Low Signal Mode do?", "What's in my Circle?", "How does Share ETA work?"]
     };
   }
 

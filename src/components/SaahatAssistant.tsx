@@ -29,21 +29,6 @@ interface SaahatAssistantProps {
   onTriggerSOS: () => void;
 }
 
-const INITIAL_MESSAGES: AssistantMessage[] = [
-  {
-    id: 'msg-welcome',
-    sender: 'assistant',
-    text: "Hi, I'm Saarthi — your journey guide. Ask me anything about your route or the app.",
-    timestamp: 'Just now',
-    quickReplies: [
-      "Why is this route the best match?",
-      "What does Low Signal Mode do?",
-      "What's in my Circle?",
-      "Is this route well-lit?"
-    ]
-  }
-];
-
 export const SaahatAssistant: React.FC<SaahatAssistantProps> = ({
   activePage,
   selectedRoute,
@@ -55,7 +40,25 @@ export const SaahatAssistant: React.FC<SaahatAssistantProps> = ({
   onTriggerSOS
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<AssistantMessage[]>(INITIAL_MESSAGES);
+  const getInitialWelcomeMessage = (): AssistantMessage => ({
+    id: 'msg-welcome',
+    sender: 'assistant',
+    text: "Hi, I'm Saarthi — your journey guide. Ask me anything about your route or the app.",
+    timestamp: 'Just now',
+    quickReplies: selectedRoute ? [
+      "Why is this route the best match?",
+      "What does Low Signal Mode do?",
+      "What's in my Circle?",
+      "Is this route well-lit?"
+    ] : [
+      "What does Low Signal Mode do?",
+      "What's in my Circle?",
+      "How does Share ETA work?",
+      "Where am I?"
+    ]
+  });
+
+  const [messages, setMessages] = useState<AssistantMessage[]>([getInitialWelcomeMessage()]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -152,7 +155,7 @@ export const SaahatAssistant: React.FC<SaahatAssistantProps> = ({
   };
 
   const handleResetChat = () => {
-    setMessages(INITIAL_MESSAGES);
+    setMessages([getInitialWelcomeMessage()]);
   };
 
   return (

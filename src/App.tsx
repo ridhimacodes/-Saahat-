@@ -115,7 +115,8 @@ export function App() {
   // Recalculate routes dynamically whenever timeOfDay or base routes change
   const timeEvaluatedRoutes = recalculateRouteScoresForTime(routes, timeOfDay);
   const selectedRoute = timeEvaluatedRoutes.find(r => r.id === selectedRouteId) || timeEvaluatedRoutes[0];
-  const hasUserSearched = Boolean(origin && destination) || ['results', 'share', 'journey'].includes(activePage);
+  // A route is ONLY active if origin and destination are present AND user is currently on results, share, or journey screens
+  const hasUserSearched = Boolean(origin && destination) && ['results', 'share', 'journey'].includes(activePage);
   const saarthiActiveRoute = hasUserSearched ? selectedRoute : null;
 
   const handleSearchComplete = async (newOrigin: string, newDestination: string, newMode?: TravelMode) => {
@@ -161,11 +162,15 @@ export function App() {
 
   const handleEndJourney = () => {
     setIsJourneyStarted(false);
-    handleGoBack();
+    setOrigin("");
+    setDestination("");
+    changePage('home');
   };
 
   const handleNavigateHome = () => {
     setIsJourneyStarted(false);
+    setOrigin("");
+    setDestination("");
     changePage('home');
   };
 
