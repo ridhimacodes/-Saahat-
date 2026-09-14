@@ -255,7 +255,7 @@ export function App() {
 
             {activePage === 'share' && (
               <ShareJourneyPage
-                selectedRoute={selectedRoute}
+                selectedRoute={saarthiActiveRoute}
                 isJourneyStarted={isJourneyStarted}
                 onNavigateHome={handleNavigateHome}
                 onStartJourney={handleStartJourneyFromShare}

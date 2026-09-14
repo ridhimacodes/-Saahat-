@@ -1,14 +1,20 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
-import { ShieldCheck, UserCheck, Clock, CheckCircle2, Send, Lock, Sparkles, Heart, Copy, Check, ArrowLeft } from 'lucide-react';
+import { ShieldCheck, UserCheck, Clock, CheckCircle2, Send, Lock, Sparkles, Heart, Copy, Check, ArrowLeft, History, Trash2, X, Plus } from 'lucide-react';
 import { RouteOption, TrustedContact } from '../types';
 import { TRUSTED_CONTACTS } from '../data/mockData';
 import { fetchEmergencyContacts, addEmergencyContact, deleteEmergencyContact } from '../services/supabaseService';
-import { Trash2, Plus } from 'lucide-react';
+import { 
+  getSharedETAHistory, 
+  addSharedETAHistory, 
+  clearSharedETAHistory, 
+  removeSharedETAHistoryItem, 
+  SharedETAHistoryItem 
+} from '../services/historyService';
 
 interface ShareJourneyPageProps {
-  selectedRoute: RouteOption;
+  selectedRoute?: RouteOption | null;
   onNavigateHome: () => void;
   onStartJourney?: () => void;
   onBack?: () => void;
@@ -30,6 +36,7 @@ export const ShareJourneyPage: React.FC<ShareJourneyPageProps> = ({
   const [customPhone, setCustomPhone] = useState("");
   const [useCustomContact, setUseCustomContact] = useState(false);
   const [isSavingContact, setIsSavingContact] = useState(false);
+  const [sharedETAHistory, setSharedETAHistory] = useState<SharedETAHistoryItem[]>(() => getSharedETAHistory());
 
   // Sync saved emergency contacts from Supabase in background
   React.useEffect(() => {
@@ -62,12 +69,27 @@ export const ShareJourneyPage: React.FC<ShareJourneyPageProps> = ({
     ? (customPhone || "") 
     : (selectedContact?.phone || "");
 
+  const routeDisplayName = selectedRoute ? selectedRoute.name.split('—')[0].trim() : "Custom Route";
+  const routeDuration = selectedRoute ? selectedRoute.durationMinutes : 15;
+
   const generatedMessage = isJourneyStarted
-    ? `I have started my journey via ${selectedRoute.name.split('—')[0].trim()} (${selectedRoute.durationMinutes} mins), expected arrival by ${arrivalTime}. Powered by Saahat.`
-    : `Journey pending: Route planned via ${selectedRoute.name.split('—')[0].trim()} (${selectedRoute.durationMinutes} mins). Live ETA activates upon journey start. Powered by Saahat.`;
+    ? `I have started my journey via ${routeDisplayName} (${routeDuration} mins), expected arrival by ${arrivalTime}. Powered by Saahat.`
+    : `Journey pending: Route planned via ${routeDisplayName} (${routeDuration} mins). Live ETA activates upon journey start. Powered by Saahat.`;
 
   const handleShareETA = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Record strictly to Shared ETA History: who we shared with and what route was shared
+    const updatedHistory = addSharedETAHistory({
+      recipientName: contactName,
+      recipientPhone: contactPhone,
+      routeName: selectedRoute ? selectedRoute.name : 'Custom Journey',
+      durationMinutes: selectedRoute ? selectedRoute.durationMinutes : 15,
+      distanceKm: selectedRoute ? selectedRoute.distanceKm : 0,
+      expectedArrivalTime: arrivalTime
+    });
+    setSharedETAHistory(updatedHistory);
+
     if (!isJourneyStarted && onStartJourney) {
       onStartJourney();
       return;
@@ -138,27 +160,29 @@ export const ShareJourneyPage: React.FC<ShareJourneyPageProps> = ({
         }`}
       >
         
-        {/* Route Summary Pill */}
-        <div className={`p-4 rounded-2xl flex items-center justify-between ${
-          isLowSignalGlobal ? 'bg-slate-800 border border-slate-700' : 'bg-purple-50/80 border border-purple-100'
-        }`}>
-          <div>
-            <span className={`text-[11px] font-bold uppercase tracking-wider block ${
-              isLowSignalGlobal ? 'text-amber-400 font-mono' : 'text-slate-400'
-            }`}>Selected Route</span>
-            <span className={`font-extrabold text-sm ${
-              isLowSignalGlobal ? 'text-white' : 'text-slate-900'
-            }`}>{selectedRoute.name}</span>
+        {/* Route Summary Pill - ONLY shown when a route is actually selected, never showing static statement */}
+        {selectedRoute && (
+          <div className={`p-4 rounded-2xl flex items-center justify-between ${
+            isLowSignalGlobal ? 'bg-slate-800 border border-slate-700' : 'bg-purple-50/80 border border-purple-100'
+          }`}>
+            <div>
+              <span className={`text-[11px] font-bold uppercase tracking-wider block ${
+                isLowSignalGlobal ? 'text-amber-400 font-mono' : 'text-slate-400'
+              }`}>Selected Route</span>
+              <span className={`font-extrabold text-sm ${
+                isLowSignalGlobal ? 'text-white' : 'text-slate-900'
+              }`}>{selectedRoute.name}</span>
+            </div>
+            <div className="text-right">
+              <span className={`text-xs font-bold block ${
+                isLowSignalGlobal ? 'text-amber-300' : 'text-brand-purple'
+              }`}>{selectedRoute.durationMinutes} mins</span>
+              <span className={`text-[11px] ${
+                isLowSignalGlobal ? 'text-slate-300' : 'text-slate-500'
+              }`}>{selectedRoute.distanceKm} km</span>
+            </div>
           </div>
-          <div className="text-right">
-            <span className={`text-xs font-bold block ${
-              isLowSignalGlobal ? 'text-amber-300' : 'text-brand-purple'
-            }`}>{selectedRoute.durationMinutes} mins</span>
-            <span className={`text-[11px] ${
-              isLowSignalGlobal ? 'text-slate-300' : 'text-slate-500'
-            }`}>{selectedRoute.distanceKm} km</span>
-          </div>
-        </div>
+        )}
 
         {!isShared ? (
           <form onSubmit={handleShareETA} className="space-y-6">
@@ -444,6 +468,81 @@ export const ShareJourneyPage: React.FC<ShareJourneyPageProps> = ({
         </div>
 
       </motion.div>
+
+      {/* Shared ETA History Section - Only displayed when ETAs have actually been shared */}
+      {sharedETAHistory.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`rounded-3xl p-6 border shadow-sm space-y-3 ${
+            isLowSignalGlobal
+              ? 'bg-slate-900 border-slate-800 text-slate-100'
+              : 'bg-white border-purple-100'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <History className={`w-4 h-4 ${isLowSignalGlobal ? 'text-amber-400' : 'text-brand-purple'}`} />
+              <h3 className={`font-bold text-sm ${isLowSignalGlobal ? 'text-white' : 'text-slate-900'}`}>
+                Shared ETA History ({sharedETAHistory.length})
+              </h3>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                clearSharedETAHistory();
+                setSharedETAHistory([]);
+              }}
+              className={`text-[11px] font-semibold hover:underline flex items-center gap-1 ${
+                isLowSignalGlobal ? 'text-slate-400 hover:text-rose-400' : 'text-slate-500 hover:text-rose-600'
+              }`}
+            >
+              <Trash2 className="w-3 h-3" />
+              <span>Clear History</span>
+            </button>
+          </div>
+
+          <div className="space-y-2 pt-1">
+            {sharedETAHistory.map((item) => (
+              <div
+                key={item.id}
+                className={`p-3.5 rounded-2xl border text-xs flex items-center justify-between transition-all ${
+                  isLowSignalGlobal
+                    ? 'bg-slate-950/60 border-slate-800 text-slate-200'
+                    : 'bg-purple-50/50 border-purple-100 text-slate-800'
+                }`}
+              >
+                <div className="space-y-1 flex-1 mr-3">
+                  <div className="flex items-center gap-2">
+                    <span className="font-extrabold text-sm">{item.recipientName}</span>
+                    {item.recipientPhone && (
+                      <span className="text-[11px] text-slate-400">({item.recipientPhone})</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 text-[11px] text-slate-500 flex-wrap">
+                    <span>Route: <strong className="text-slate-700 dark:text-slate-300">{item.routeName.split('—')[0].trim()}</strong></span>
+                    <span>• Expected: <strong className="text-emerald-600 dark:text-emerald-400">{item.expectedArrivalTime}</strong></span>
+                    <span>• Shared at: {item.sharedAt}</span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const updated = removeSharedETAHistoryItem(item.id);
+                    setSharedETAHistory(updated);
+                  }}
+                  className="p-1.5 text-slate-400 hover:text-rose-600 rounded transition-colors"
+                  title="Remove from history"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
     </div>
   );
 };

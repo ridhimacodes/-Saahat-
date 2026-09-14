@@ -1,4 +1,5 @@
-﻿export interface SearchHistoryItem {
+﻿// --- SEARCH HISTORY ---
+export interface SearchHistoryItem {
   id: string;
   origin: string;
   destination: string;
@@ -65,6 +66,70 @@ export function removeSearchHistoryItem(id: string): SearchHistoryItem[] {
     return updated;
   } catch (e) {
     console.warn('Failed to remove search history item:', e);
+    return [];
+  }
+}
+
+// --- SHARED ETA HISTORY ---
+export interface SharedETAHistoryItem {
+  id: string;
+  recipientName: string;
+  recipientPhone: string;
+  routeName: string;
+  durationMinutes: number;
+  distanceKm: number;
+  expectedArrivalTime: string;
+  sharedAt: string;
+  timestamp: number;
+}
+
+const SHARED_ETA_HISTORY_KEY = 'saahat_shared_eta_history';
+
+export function getSharedETAHistory(): SharedETAHistoryItem[] {
+  try {
+    const raw = localStorage.getItem(SHARED_ETA_HISTORY_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw);
+  } catch (e) {
+    console.warn('Failed to parse shared ETA history:', e);
+    return [];
+  }
+}
+
+export function addSharedETAHistory(item: Omit<SharedETAHistoryItem, 'id' | 'sharedAt' | 'timestamp'>): SharedETAHistoryItem[] {
+  try {
+    const existing = getSharedETAHistory();
+    const newItem: SharedETAHistoryItem = {
+      ...item,
+      id: `eta-hist-${Date.now()}`,
+      sharedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      timestamp: Date.now()
+    };
+    const updated = [newItem, ...existing].slice(0, 20);
+    localStorage.setItem(SHARED_ETA_HISTORY_KEY, JSON.stringify(updated));
+    return updated;
+  } catch (e) {
+    console.warn('Failed to save shared ETA history:', e);
+    return [];
+  }
+}
+
+export function clearSharedETAHistory(): void {
+  try {
+    localStorage.removeItem(SHARED_ETA_HISTORY_KEY);
+  } catch (e) {
+    console.warn('Failed to clear shared ETA history:', e);
+  }
+}
+
+export function removeSharedETAHistoryItem(id: string): SharedETAHistoryItem[] {
+  try {
+    const existing = getSharedETAHistory();
+    const updated = existing.filter(item => item.id !== id);
+    localStorage.setItem(SHARED_ETA_HISTORY_KEY, JSON.stringify(updated));
+    return updated;
+  } catch (e) {
+    console.warn('Failed to remove shared ETA item:', e);
     return [];
   }
 }
