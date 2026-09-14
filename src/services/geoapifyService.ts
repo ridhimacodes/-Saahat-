@@ -24,6 +24,7 @@ export interface GeoapifyRouteResponse {
   durationMinutes: number;
   coordinates: [number, number][];
   steps: string[];
+  streetNames?: string[];
 }
 
 /**
@@ -155,12 +156,24 @@ export async function getGeoapifyRoute(
     }
 
     const steps: string[] = [];
+    const streetNames: string[] = [];
     if (props.legs && Array.isArray(props.legs)) {
       props.legs.forEach((leg: any) => {
         if (leg.steps && Array.isArray(leg.steps)) {
           leg.steps.forEach((step: any) => {
             if (step.instruction?.text) {
-              steps.push(step.instruction.text);
+              const text = step.instruction.text;
+              steps.push(text);
+
+              // Extract actual road/corridor names (e.g. "Turn left onto Pragati Marg", "stay on Dallupura Marg")
+              const m = text.match(/(?:onto|along)\s+([^.,]+)/i) || text.match(/(?:stay on)\s+([^.,]+)/i);
+              if (m && m[1]) {
+                const clean = m[1].replace(/at\s+.*$/, '').trim();
+                const invalid = ['the left', 'the right', 'north', 'south', 'east', 'west', 'northwest', 'northeast', 'southwest', 'southeast'];
+                if (!invalid.includes(clean.toLowerCase()) && clean.length > 2 && !streetNames.includes(clean)) {
+                  streetNames.push(clean);
+                }
+              }
             }
           });
         }
@@ -174,7 +187,8 @@ export async function getGeoapifyRoute(
       distanceKm,
       durationMinutes,
       coordinates,
-      steps
+      steps,
+      streetNames
     };
   } catch (err) {
     console.error('Geoapify routing error:', err);

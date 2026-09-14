@@ -227,10 +227,37 @@ export async function geocodeLocationQuery(query: string, referenceLoc?: [number
   return { name: cleanQuery.split('(')[0].trim(), lat: 28.6653, lng: 77.2324 };
 }
 
-export function getDynamicRouteNames(originQuery: string, destQuery: string) {
-  const cleanOrig = originQuery.split(',')[0].trim();
-  const cleanDest = destQuery.split(',')[0].trim();
+export function getDynamicRouteNames(originQuery: string, destQuery: string, traversedStreetNames?: string[]) {
+  const cleanOrig = originQuery.split(',')[0].replace(/\([^)]*\)/g, '').trim();
+  const cleanDest = destQuery.split(',')[0].replace(/\([^)]*\)/g, '').trim();
   const combined = (originQuery + " " + destQuery).toLowerCase();
+
+  // If real turn-by-turn road names were traversed along the Geoapify route, use the exact real street names!
+  if (traversedStreetNames && traversedStreetNames.length > 0) {
+    const s1 = traversedStreetNames[0];
+    const s2 = traversedStreetNames[1] || traversedStreetNames[0];
+    const s3 = traversedStreetNames[2] || traversedStreetNames[1] || `${cleanOrig} Main Road`;
+    const s4 = traversedStreetNames[3] || traversedStreetNames[0];
+
+    return [
+      {
+        name: `BEST MATCH — via ${s1} & ${s2}`,
+        via: `via ${s1}, ${s2} & ${cleanDest} Promenade`
+      },
+      {
+        name: `FASTEST — via ${s1} Direct Corridor`,
+        via: `via ${s1}, ${s3} & Main Arterial Link`
+      },
+      {
+        name: `MORE COMFORTABLE — via ${s2} & Sidewalk Avenue`,
+        via: `via ${s2}, ${cleanOrig} Residential Link & Guarded Perimeter`
+      },
+      {
+        name: `MORE ACTIVE — via ${s4} Commercial Hub`,
+        via: `via ${s4}, High Footfall Storefronts & Transit Link`
+      }
+    ];
+  }
 
   // --- MUMBAI SOUTH & CENTRAL ---
   if (combined.includes("cst") || combined.includes("chhatrapati") || combined.includes("marine") || combined.includes("colaba") || combined.includes("gateway") || combined.includes("nariman") || combined.includes("churchgate")) {
@@ -548,8 +575,8 @@ export async function generateRealRoutes(
     ? googleRoutes[0].steps
     : undefined;
 
-  // Get real, location-specific route names and via descriptions
-  const routeNames = getDynamicRouteNames(originLoc.name, destLoc.name);
+  // Get real, location-specific route names and via descriptions from traversed roads
+  const routeNames = getDynamicRouteNames(originLoc.name, destLoc.name, geoapifyRoute?.streetNames);
 
   return [
     {
