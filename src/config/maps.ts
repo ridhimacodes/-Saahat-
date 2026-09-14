@@ -14,42 +14,42 @@ export const DEFAULT_GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_
 // 1. Map Tiles API Key (For rendering custom Leaflet map styles, e.g., osm-bright)
 // Place your Geoapify Map Tiles API key here:
 export const GEOAPIFY_MAP_TILES_API_KEY =
-  import.meta.env.VITE_GEOAPIFY_MAP_TILES_API_KEY || "PASTE_YOUR_MAP_TILES_API_KEY_HERE";
+  (import.meta.env.VITE_GEOAPIFY_MAP_TILES_API_KEY || "be88317e15454d96ada9462341bce371").trim();
 
 // 2. Geocoding API Key (For searching addresses, landmarks, colleges, and getting coordinates)
 // Place your Geoapify Geocoding API key here:
 export const GEOAPIFY_GEOCODING_API_KEY =
-  import.meta.env.VITE_GEOAPIFY_GEOCODING_API_KEY || "PASTE_YOUR_GEOCODING_API_KEY_HERE";
+  (import.meta.env.VITE_GEOAPIFY_GEOCODING_API_KEY || "1f79260d36974e08b3bbf55e7e7ac7f2").trim();
 
 // 3. Autocomplete API Key (For live dropdown search suggestions as user types)
 // Place your Geoapify Autocomplete API key here:
 export const GEOAPIFY_AUTOCOMPLETE_API_KEY =
-  import.meta.env.VITE_GEOAPIFY_AUTOCOMPLETE_API_KEY || "PASTE_YOUR_AUTOCOMPLETE_API_KEY_HERE";
+  (import.meta.env.VITE_GEOAPIFY_AUTOCOMPLETE_API_KEY || "9290498e4b5d471ca6df13746961d590").trim();
 
 // 4. Places API Key (For finding nearby safe havens, open stores, police stations, cafes)
 // Place your Geoapify Places API key here:
 export const GEOAPIFY_PLACES_API_KEY =
-  import.meta.env.VITE_GEOAPIFY_PLACES_API_KEY || "PASTE_YOUR_PLACES_API_KEY_HERE";
+  (import.meta.env.VITE_GEOAPIFY_PLACES_API_KEY || "514f88ec38bf42eb8385500b152bf738").trim();
 
 // 5. Place Details API Key (For opening hours, phone numbers, exact boundaries, facilities)
 // Place your Geoapify Place Details API key here:
 export const GEOAPIFY_PLACE_DETAILS_API_KEY =
-  import.meta.env.VITE_GEOAPIFY_PLACE_DETAILS_API_KEY || "PASTE_YOUR_PLACE_DETAILS_API_KEY_HERE";
+  (import.meta.env.VITE_GEOAPIFY_PLACE_DETAILS_API_KEY || "31a55d09eb5b44d2a0256593dc541576").trim();
 
 // 6. Routing API Key (For turn-by-turn walking directions, safe corridors, distance, and ETA)
 // Place your Geoapify Routing API key here:
 export const GEOAPIFY_ROUTING_API_KEY =
-  import.meta.env.VITE_GEOAPIFY_ROUTING_API_KEY || "PASTE_YOUR_ROUTING_API_KEY_HERE";
+  (import.meta.env.VITE_GEOAPIFY_ROUTING_API_KEY || "4057e1e893234b9aa6bc972ff540b18c").trim();
 
 // 7. Reverse Geocoding API Key (For converting user GPS coordinates [lat, lng] into a readable address)
 // Place your Geoapify Reverse Geocoding API key here:
 export const GEOAPIFY_REVERSE_GEOCODING_API_KEY =
-  import.meta.env.VITE_GEOAPIFY_REVERSE_GEOCODING_API_KEY || "PASTE_YOUR_REVERSE_GEOCODING_API_KEY_HERE";
+  (import.meta.env.VITE_GEOAPIFY_REVERSE_GEOCODING_API_KEY || "e2890656524f4405b015d43a764588ce").trim();
 
 // 8. Static Map API Key (For generating offline static map snapshot images for Low Signal mode & emergency SMS)
 // Place your Geoapify Static Map API key here:
 export const GEOAPIFY_STATIC_MAP_API_KEY =
-  import.meta.env.VITE_GEOAPIFY_STATIC_MAP_API_KEY || "PASTE_YOUR_STATIC_MAP_API_KEY_HERE";
+  (import.meta.env.VITE_GEOAPIFY_STATIC_MAP_API_KEY || "3b7c42f03f774fef9e1530076cfcda12").trim();
 
 export interface GeoapifyServiceEndpoints {
   mapTiles: {
