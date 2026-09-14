@@ -13,7 +13,7 @@ import { LowSignalPage } from './components/LowSignalPage';
 import { ActiveJourneyPage } from './components/ActiveJourneyPage';
 import { SOSModal } from './components/SOSModal';
 import { SaahatAssistant } from './components/SaahatAssistant';
-import { User, X, Camera, CheckCircle2 } from 'lucide-react';
+import { User, X, Camera, CheckCircle2, Plus, Trash2, MapPin } from 'lucide-react';
 import { generateRealRoutes, recalculateRouteScoresForTime, getLiveTimeOfDay } from './services/routing';
 import { fetchUserProfile, saveUserProfile, fetchCommunityNotes, createCommunityNote } from './services/supabaseService';
 
@@ -31,6 +31,9 @@ export function App() {
 
   const [userProfile, setUserProfile] = useState<UserProfile>(INITIAL_USER_PROFILE);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isAddingLocation, setIsAddingLocation] = useState(false);
+  const [newLocLabel, setNewLocLabel] = useState('Home');
+  const [newLocAddress, setNewLocAddress] = useState('');
   const [isLowSignalGlobal, setIsLowSignalGlobal] = useState(false);
   const [isSOSOpenDirectly, setIsSOSOpenDirectly] = useState(false);
 
@@ -401,19 +404,127 @@ export function App() {
               </div>
 
               {/* Saved Quick Locations */}
-              <div className="space-y-2 border-t border-slate-100 pt-4">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
-                  Saved Quick Locations
-                </span>
-                {userProfile.savedLocations.length > 0 ? (
-                  userProfile.savedLocations.map((loc, idx) => (
-                    <div key={idx} className="p-3 rounded-2xl bg-purple-50/60 border border-purple-100 flex items-center justify-between text-xs">
-                      <span className="font-bold text-slate-900">{loc.label}</span>
-                      <span className="text-slate-500 truncate max-w-[200px]">{loc.address}</span>
+              <div className="space-y-3 border-t border-slate-100 pt-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+                    Saved Quick Locations
+                  </span>
+                  {!isAddingLocation && (
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingLocation(true)}
+                      className="px-2.5 py-1 rounded-full bg-purple-100 hover:bg-purple-200 text-purple-700 text-xs font-bold flex items-center gap-1 transition-all"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add Location</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Add Location Inline Form */}
+                {isAddingLocation && (
+                  <div className="p-3.5 rounded-2xl bg-purple-50/90 border border-purple-200 space-y-2.5">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                          Label
+                        </label>
+                        <select
+                          value={newLocLabel}
+                          onChange={(e) => setNewLocLabel(e.target.value)}
+                          className="w-full text-xs font-bold p-2 rounded-xl bg-white border border-purple-200 text-slate-800 outline-hidden"
+                        >
+                          <option value="Home">Home</option>
+                          <option value="Work">Work</option>
+                          <option value="College">College</option>
+                          <option value="Gym">Gym</option>
+                          <option value="Favorite">Favorite</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
                     </div>
-                  ))
+
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                        Address / Place Name
+                      </label>
+                      <input
+                        type="text"
+                        value={newLocAddress}
+                        placeholder="e.g. Connaught Place, New Delhi"
+                        onChange={(e) => setNewLocAddress(e.target.value)}
+                        className="w-full text-xs p-2 rounded-xl bg-white border border-purple-200 text-slate-800 outline-hidden focus:border-brand-purple"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAddingLocation(false);
+                          setNewLocAddress('');
+                        }}
+                        className="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-200/60 transition-all"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        disabled={!newLocAddress.trim()}
+                        onClick={async () => {
+                          if (!newLocAddress.trim()) return;
+                          const newLocation = {
+                            label: newLocLabel,
+                            address: newLocAddress.trim()
+                          };
+                          const updated = {
+                            ...userProfile,
+                            savedLocations: [...userProfile.savedLocations, newLocation]
+                          };
+                          setUserProfile(updated);
+                          setIsAddingLocation(false);
+                          setNewLocAddress('');
+                          await saveUserProfile(updated);
+                        }}
+                        className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white disabled:opacity-50 transition-all shadow-xs"
+                      >
+                        Save Location
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {userProfile.savedLocations.length > 0 ? (
+                  <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                    {userProfile.savedLocations.map((loc, idx) => (
+                      <div key={idx} className="p-3 rounded-2xl bg-purple-50/60 border border-purple-100 flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <MapPin className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                          <div className="min-w-0">
+                            <span className="font-bold text-slate-900 block truncate">{loc.label}</span>
+                            <span className="text-slate-500 truncate block text-[11px] max-w-[190px] sm:max-w-[240px]">{loc.address}</span>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const updatedList = userProfile.savedLocations.filter((_, i) => i !== idx);
+                            const updated = { ...userProfile, savedLocations: updatedList };
+                            setUserProfile(updated);
+                            await saveUserProfile(updated);
+                          }}
+                          className="p-1 text-slate-400 hover:text-rose-500 transition-colors"
+                          title="Delete saved location"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 ) : (
-                  <p className="text-xs text-slate-400 italic text-center py-2">No saved locations yet.</p>
+                  !isAddingLocation && (
+                    <p className="text-xs text-slate-400 italic text-center py-2">No saved locations yet. Tap "+ Add Location" to save your Home, Work, or College.</p>
+                  )
                 )}
               </div>
 
