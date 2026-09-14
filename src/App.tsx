@@ -15,6 +15,7 @@ import { SOSModal } from './components/SOSModal';
 import { SaahatAssistant } from './components/SaahatAssistant';
 import { User, X, Camera, CheckCircle2 } from 'lucide-react';
 import { generateRealRoutes, recalculateRouteScoresForTime, getLiveTimeOfDay } from './services/routing';
+import { fetchUserProfile, saveUserProfile, fetchCommunityNotes, createCommunityNote } from './services/supabaseService';
 
 export function App() {
   const [activePage, setActivePage] = useState<PageType>('home');
@@ -43,6 +44,16 @@ export function App() {
 
   // Community Notes Feed State
   const [communityNotes, setCommunityNotes] = useState<CommunityNote[]>(INITIAL_COMMUNITY_NOTES);
+
+  // Invisible Supabase Initial Sync (loads persisted data if authenticated, otherwise preserves mock defaults seamlessly)
+  useEffect(() => {
+    fetchUserProfile().then((profile) => {
+      if (profile) setUserProfile(profile);
+    });
+    fetchCommunityNotes().then((notes) => {
+      if (notes && notes.length > 0) setCommunityNotes(notes);
+    });
+  }, []);
 
   // Browser History Navigation Manager
   const changePage = (newPage: PageType, replace = false) => {
@@ -158,6 +169,7 @@ export function App() {
 
   const handleAddCommunityNote = (newNote: CommunityNote) => {
     setCommunityNotes(prev => [newNote, ...prev]);
+    createCommunityNote(newNote).catch(err => console.warn('Supabase note save:', err));
   };
 
   return (

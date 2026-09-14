@@ -4,6 +4,7 @@ import confetti from 'canvas-confetti';
 import { ShieldCheck, UserCheck, Clock, CheckCircle2, Send, Lock, Sparkles, Heart, Copy, Check, ArrowLeft } from 'lucide-react';
 import { RouteOption, TrustedContact } from '../types';
 import { TRUSTED_CONTACTS } from '../data/mockData';
+import { fetchEmergencyContacts } from '../services/supabaseService';
 
 interface ShareJourneyPageProps {
   selectedRoute: RouteOption;
@@ -22,10 +23,21 @@ export const ShareJourneyPage: React.FC<ShareJourneyPageProps> = ({
   isLowSignalGlobal = false,
   isJourneyStarted = false
 }) => {
+  const [contactsList, setContactsList] = useState<TrustedContact[]>(TRUSTED_CONTACTS);
   const [selectedContact, setSelectedContact] = useState<TrustedContact>(TRUSTED_CONTACTS[0]);
   const [customName, setCustomName] = useState("");
   const [customPhone, setCustomPhone] = useState("");
   const [useCustomContact, setUseCustomContact] = useState(false);
+
+  // Sync saved emergency contacts from Supabase in background
+  React.useEffect(() => {
+    fetchEmergencyContacts().then((loaded) => {
+      if (loaded && loaded.length > 0) {
+        setContactsList(loaded);
+        setSelectedContact(loaded[0]);
+      }
+    });
+  }, []);
   
   // Compute realistic live arrival time (Now + duration)
   const computeLiveETA = () => {
@@ -166,7 +178,7 @@ export const ShareJourneyPage: React.FC<ShareJourneyPageProps> = ({
 
               {!useCustomContact ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {TRUSTED_CONTACTS.map((contact) => {
+                  {contactsList.map((contact) => {
                     const isSelected = selectedContact.id === contact.id;
                     return (
                       <div

@@ -34,6 +34,7 @@ import {
 import { RouteOption, TimeOfDay } from '../types';
 import { MapContainer, TileLayer, Polyline, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
+import { logJourneyStart, markJourneyComplete } from '../services/supabaseService';
 
 interface ActiveJourneyPageProps {
   selectedRoute: RouteOption;
@@ -178,6 +179,20 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
   const [showStepsDrawer, setShowStepsDrawer] = useState(false);
   const [hasArrived, setHasArrived] = useState(false);
   const [recenterTrigger, setRecenterTrigger] = useState(0);
+  const [journeyLogId, setJourneyLogId] = useState<string | null>(null);
+
+  // Background logging of active journey to Supabase
+  useEffect(() => {
+    const arrivalTimeStr = (() => {
+      const d = new Date();
+      d.setMinutes(d.getMinutes() + selectedRoute.durationMinutes);
+      return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    })();
+
+    logJourneyStart(origin, destination, selectedRoute, arrivalTimeStr)
+      .then(id => { if (id) setJourneyLogId(id); })
+      .catch(err => console.warn('Supabase journey log:', err));
+  }, []);
 
   // Active layers state for nearby support places
   const [activeLayers, setActiveLayers] = useState<Record<string, boolean>>({
@@ -271,6 +286,7 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
           } else {
             setHasArrived(true);
             setIsNavigating(false);
+            markJourneyComplete(journeyLogId);
             speakText(`You have arrived safely at ${destination.split(',')[0]}. Journey complete.`);
             confetti({ particleCount: 150, spread: 90, origin: { y: 0.5 } });
             return prev;
@@ -279,11 +295,12 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
       }, 5000);
     }
     return () => clearInterval(interval);
-  }, [isNavigating, hasArrived, steps.length, destination]);
+  }, [isNavigating, hasArrived, steps.length, destination, journeyLogId]);
 
   const handleArrivedSafely = () => {
     setHasArrived(true);
     setIsNavigating(false);
+    markJourneyComplete(journeyLogId);
     speakText(`You have arrived safely at ${destination.split(',')[0]}. Journey complete.`);
     confetti({
       particleCount: 180,
