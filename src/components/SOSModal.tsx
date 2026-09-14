@@ -5,7 +5,7 @@ import { TrustedContact } from '../types';
 import confetti from 'canvas-confetti';
 
 interface SOSModalProps {
-  trustedContact: TrustedContact;
+  trustedContact?: TrustedContact;
   isOpenDirectly?: boolean;
   onCloseDirectly?: () => void;
 }
@@ -177,13 +177,17 @@ export const SOSModal: React.FC<SOSModalProps> = ({
                   {/* One-Tap Emergency Options */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <button
-                      onClick={() => triggerCallSimulation(trustedContact.name)}
+                      onClick={() => triggerCallSimulation(trustedContact ? trustedContact.name : 'Emergency Helpline (112)')}
                       className="p-4 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-left transition-all group"
                     >
                       <Phone className="w-5 h-5 text-pink-400 mb-2 group-hover:scale-110 transition-transform" />
                       <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Call Primary Contact</span>
-                      <strong className="text-sm font-bold text-white block truncate">{trustedContact.name}</strong>
-                      <span className="text-[11px] text-slate-400 block">{trustedContact.phone}</span>
+                      <strong className="text-sm font-bold text-white block truncate">
+                        {trustedContact ? trustedContact.name : 'Emergency Helpline'}
+                      </strong>
+                      <span className="text-[11px] text-slate-400 block">
+                        {trustedContact ? trustedContact.phone : '112 / Police'}
+                      </span>
                     </button>
 
                     <div className="p-4 rounded-2xl bg-slate-800 border border-slate-700 text-left flex flex-col justify-between">

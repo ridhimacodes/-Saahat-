@@ -341,19 +341,46 @@ export function App() {
                 <div className="relative inline-block">
                   <img
                     src={userProfile.avatarUrl}
-                    alt={userProfile.name}
-                    className="w-24 h-24 rounded-full object-cover border-4 border-brand-purple mx-auto shadow-md"
+                    alt={userProfile.name || "Profile"}
+                    className="w-24 h-24 rounded-full object-cover border-4 border-brand-purple mx-auto shadow-md bg-purple-50"
                   />
-                  <span className="absolute bottom-1 right-1 p-1.5 bg-brand-pink text-white rounded-full">
+                  <label className="absolute bottom-1 right-1 p-1.5 bg-brand-pink text-white rounded-full cursor-pointer hover:scale-110 transition-transform">
                     <Camera className="w-4 h-4" />
-                  </span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (ev) => {
+                            if (ev.target?.result) {
+                              const updated = { ...userProfile, avatarUrl: ev.target.result as string };
+                              setUserProfile(updated);
+                              saveUserProfile(updated);
+                            }
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                  </label>
                 </div>
 
-                <h3 className="text-xl font-bold text-slate-900">{userProfile.name}</h3>
-                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-purple-100 text-brand-purple text-xs font-bold">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                  Prototype Account
-                </span>
+                <div className="space-y-1">
+                  <input
+                    type="text"
+                    value={userProfile.name}
+                    placeholder="Enter your name"
+                    onChange={(e) => setUserProfile(prev => ({ ...prev, name: e.target.value }))}
+                    className="text-xl font-bold text-slate-900 text-center w-full border-b border-purple-200 focus:border-brand-purple outline-hidden bg-transparent pb-1"
+                  />
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-purple-100 text-brand-purple text-xs font-bold mt-1">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    Verified User Account
+                  </span>
+                </div>
               </div>
 
               {/* Saved Quick Locations */}
@@ -361,17 +388,24 @@ export function App() {
                 <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
                   Saved Quick Locations
                 </span>
-                {userProfile.savedLocations.map((loc, idx) => (
-                  <div key={idx} className="p-3 rounded-2xl bg-purple-50/60 border border-purple-100 flex items-center justify-between text-xs">
-                    <span className="font-bold text-slate-900">{loc.label}</span>
-                    <span className="text-slate-500 truncate max-w-[200px]">{loc.address}</span>
-                  </div>
-                ))}
+                {userProfile.savedLocations.length > 0 ? (
+                  userProfile.savedLocations.map((loc, idx) => (
+                    <div key={idx} className="p-3 rounded-2xl bg-purple-50/60 border border-purple-100 flex items-center justify-between text-xs">
+                      <span className="font-bold text-slate-900">{loc.label}</span>
+                      <span className="text-slate-500 truncate max-w-[200px]">{loc.address}</span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-slate-400 italic text-center py-2">No saved locations yet.</p>
+                )}
               </div>
 
               <div className="pt-2">
                 <button
-                  onClick={() => setIsProfileModalOpen(false)}
+                  onClick={async () => {
+                    await saveUserProfile(userProfile);
+                    setIsProfileModalOpen(false);
+                  }}
                   className="w-full py-3 rounded-xl bg-purple-600 text-white font-bold text-sm hover:bg-purple-700 hover:scale-105 transition-all"
                 >
                   Done

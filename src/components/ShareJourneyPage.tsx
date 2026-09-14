@@ -4,7 +4,8 @@ import confetti from 'canvas-confetti';
 import { ShieldCheck, UserCheck, Clock, CheckCircle2, Send, Lock, Sparkles, Heart, Copy, Check, ArrowLeft } from 'lucide-react';
 import { RouteOption, TrustedContact } from '../types';
 import { TRUSTED_CONTACTS } from '../data/mockData';
-import { fetchEmergencyContacts } from '../services/supabaseService';
+import { fetchEmergencyContacts, addEmergencyContact, deleteEmergencyContact } from '../services/supabaseService';
+import { Trash2, Plus } from 'lucide-react';
 
 interface ShareJourneyPageProps {
   selectedRoute: RouteOption;
@@ -181,52 +182,105 @@ export const ShareJourneyPage: React.FC<ShareJourneyPageProps> = ({
               </div>
 
               {!useCustomContact ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {contactsList.map((contact) => {
-                    const isSelected = selectedContact.id === contact.id;
-                    return (
-                      <div
-                        key={contact.id}
-                        onClick={() => setSelectedContact(contact)}
-                        className={`p-3.5 rounded-2xl border cursor-pointer transition-all flex items-center gap-3 ${
-                          isSelected
-                            ? (isLowSignalGlobal ? 'border-amber-400 bg-slate-800 ring-2 ring-amber-400' : 'border-brand-purple bg-purple-50 ring-2 ring-purple-300')
-                            : (isLowSignalGlobal ? 'border-slate-700 bg-slate-950/60 hover:border-slate-600' : 'border-slate-200 hover:border-purple-200 bg-slate-50/50')
-                        }`}
-                      >
-                        <div className={`w-10 h-10 rounded-full ${contact.avatarBg} text-white font-bold flex items-center justify-center text-sm shadow-sm`}>
-                          {contact.name.charAt(0)}
+                contactsList.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {contactsList.map((contact) => {
+                      const isSelected = selectedContact?.id === contact.id;
+                      return (
+                        <div
+                          key={contact.id}
+                          onClick={() => setSelectedContact(contact)}
+                          className={`p-3.5 rounded-2xl border cursor-pointer transition-all flex items-center justify-between gap-3 ${
+                            isSelected
+                              ? (isLowSignalGlobal ? 'border-amber-400 bg-slate-800 ring-2 ring-amber-400' : 'border-brand-purple bg-purple-50 ring-2 ring-purple-300')
+                              : (isLowSignalGlobal ? 'border-slate-700 bg-slate-950/60 hover:border-slate-600' : 'border-slate-200 hover:border-purple-200 bg-slate-50/50')
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 overflow-hidden">
+                            <div className={`w-10 h-10 rounded-full ${contact.avatarBg} text-white font-bold flex items-center justify-center text-sm shadow-sm shrink-0`}>
+                              {contact.name.charAt(0)}
+                            </div>
+                            <div className="overflow-hidden">
+                              <span className={`font-bold text-sm block truncate ${isLowSignalGlobal ? 'text-white' : 'text-slate-900'}`}>{contact.name}</span>
+                              <span className={`text-xs block truncate ${isLowSignalGlobal ? 'text-slate-300' : 'text-slate-500'}`}>{contact.phone}</span>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              await deleteEmergencyContact(contact.id);
+                              setContactsList(prev => prev.filter(c => c.id !== contact.id));
+                              if (selectedContact?.id === contact.id) {
+                                setSelectedContact(contactsList.find(c => c.id !== contact.id) || null as any);
+                              }
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors rounded-lg hover:bg-slate-100"
+                            title="Delete contact"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
-                        <div className="overflow-hidden">
-                          <span className={`font-bold text-sm block truncate ${isLowSignalGlobal ? 'text-white' : 'text-slate-900'}`}>{contact.name}</span>
-                          <span className={`text-xs block truncate ${isLowSignalGlobal ? 'text-slate-300' : 'text-slate-500'}`}>{contact.phone}</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className={`p-4 rounded-2xl border text-center text-xs ${
+                    isLowSignalGlobal ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-500'
+                  }`}>
+                    No saved contacts yet. Click <strong>+ Add Custom Number</strong> above to add one.
+                  </div>
+                )
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <input
-                    type="text"
-                    placeholder="Contact Name"
-                    value={customName}
-                    onChange={(e) => setCustomName(e.target.value)}
-                    required
-                    className={`p-3 rounded-2xl border text-sm font-medium ${
-                      isLowSignalGlobal ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-400' : 'border-slate-200 text-slate-800'
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <input
+                      type="text"
+                      placeholder="Contact Name"
+                      value={customName}
+                      onChange={(e) => setCustomName(e.target.value)}
+                      required
+                      className={`p-3 rounded-2xl border text-sm font-medium ${
+                        isLowSignalGlobal ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-400' : 'border-slate-200 text-slate-800'
+                      }`}
+                    />
+                    <input
+                      type="tel"
+                      placeholder="Phone Number"
+                      value={customPhone}
+                      onChange={(e) => setCustomPhone(e.target.value)}
+                      required
+                      className={`p-3 rounded-2xl border text-sm font-medium ${
+                        isLowSignalGlobal ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-400' : 'border-slate-200 text-slate-800'
+                      }`}
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!customName || !customPhone) return;
+                      const saved = await addEmergencyContact({
+                        name: customName,
+                        phone: customPhone,
+                        relationship: 'Trusted',
+                        avatarBg: 'bg-purple-600'
+                      });
+                      if (saved) {
+                        setContactsList(prev => [saved, ...prev]);
+                        setSelectedContact(saved);
+                        setCustomName("");
+                        setCustomPhone("");
+                        setUseCustomContact(false);
+                      }
+                    }}
+                    className={`w-full py-2.5 rounded-xl text-xs font-bold border transition-all ${
+                      isLowSignalGlobal ? 'bg-slate-800 border-slate-700 text-amber-300 hover:bg-slate-700' : 'bg-purple-50 border-purple-200 text-brand-purple hover:bg-purple-100'
                     }`}
-                  />
-                  <input
-                    type="tel"
-                    placeholder="Phone Number"
-                    value={customPhone}
-                    onChange={(e) => setCustomPhone(e.target.value)}
-                    required
-                    className={`p-3 rounded-2xl border text-sm font-medium ${
-                      isLowSignalGlobal ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-400' : 'border-slate-200 text-slate-800'
-                    }`}
-                  />
+                  >
+                    Save Contact to Account
+                  </button>
                 </div>
               )}
             </div>

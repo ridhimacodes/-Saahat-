@@ -1,13 +1,9 @@
 import { RouteOption, TrustedContact, CommunityNote, UserProfile, OfflineHelpPoint } from '../types';
 
 export const INITIAL_USER_PROFILE: UserProfile = {
-  name: "Maya Sharma",
+  name: "",
   avatarUrl: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%236C2BD9'/><circle cx='50' cy='38' r='20' fill='%23FDF4F8'/><path d='M20,90 Q50,60 80,90 Z' fill='%23FDF4F8'/><path d='M32,32 Q50,15 68,32 Q62,20 38,20 Z' fill='%23FF4D8D'/></svg>",
-  savedLocations: [
-    { label: "Home", address: "Greenwood Apartments, Sector 4" },
-    { label: "Work", address: "Innovate Tech Hub, 5th Avenue" },
-    { label: "University", address: "City Central Campus Library" }
-  ]
+  savedLocations: []
 };
 
 export const PRESET_AVATARS = [
@@ -27,12 +23,7 @@ export const POPULAR_LOCATIONS = [
   "Riverside Public Park Gate 2"
 ];
 
-export const TRUSTED_CONTACTS: TrustedContact[] = [
-  { id: '1', name: 'Mom (Anjali)', phone: '+91 98765 43210', relationship: 'Family', avatarBg: 'bg-purple-500' },
-  { id: '2', name: 'Sara (Roommate)', phone: '+91 98123 45678', relationship: 'Roommate', avatarBg: 'bg-pink-500' },
-  { id: '3', name: 'Priya (Sister)', phone: '+91 97654 32109', relationship: 'Family', avatarBg: 'bg-teal-500' },
-  { id: '4', name: 'Elena (Colleague)', phone: '+91 99887 76655', relationship: 'Friend', avatarBg: 'bg-amber-500' },
-];
+export const TRUSTED_CONTACTS: TrustedContact[] = [];
 
 export const OFFLINE_HELP_POINTS: OfflineHelpPoint[] = [
   {

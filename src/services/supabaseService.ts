@@ -3,6 +3,32 @@ import { UserProfile, TrustedContact, CommunityNote, RouteOption } from '../type
 import { INITIAL_USER_PROFILE, TRUSTED_CONTACTS, INITIAL_COMMUNITY_NOTES } from '../data/mockData';
 
 // ---------------------------------------------------------------------------
+// Authentication & Session Helper
+// ---------------------------------------------------------------------------
+
+export async function getCurrentUser() {
+  if (!isSupabaseConfigured || !supabase) return null;
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) return user;
+
+  // Try retrieving active session
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.user) return session.user;
+
+  // If no session exists yet, automatically sign in anonymously so RLS has an authentic auth.uid()
+  try {
+    const { data: anonAuth, error } = await supabase.auth.signInAnonymously();
+    if (!error && anonAuth.user) {
+      return anonAuth.user;
+    }
+  } catch (e) {
+    // If anonymous sign-in is not enabled on the Supabase project, return null
+  }
+
+  return null;
+}
+
+// ---------------------------------------------------------------------------
 // Profile Service Layer
 // ---------------------------------------------------------------------------
 
@@ -12,7 +38,7 @@ export async function fetchUserProfile(): Promise<UserProfile> {
   }
 
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getCurrentUser();
     if (!user) return INITIAL_USER_PROFILE;
 
     const { data, error } = await supabase
@@ -45,12 +71,16 @@ export async function fetchUserProfile(): Promise<UserProfile> {
 
 export async function saveUserProfile(profile: UserProfile): Promise<boolean> {
   if (!isSupabaseConfigured || !supabase) {
-    return true; // Local state handled by React state
+    console.error('Supabase is not configured');
+    return false;
   }
 
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return false;
+    const user = await getCurrentUser();
+    if (!user) {
+      console.error('No authenticated user session found when saving profile');
+      return false;
+    }
 
     const { error } = await supabase
       .from('profiles')
@@ -79,7 +109,7 @@ export async function fetchEmergencyContacts(): Promise<TrustedContact[]> {
   }
 
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getCurrentUser();
     if (!user) return [];
 
     const { data, error } = await supabase
@@ -107,16 +137,15 @@ export async function fetchEmergencyContacts(): Promise<TrustedContact[]> {
 
 export async function addEmergencyContact(contact: Omit<TrustedContact, 'id'>): Promise<TrustedContact | null> {
   if (!isSupabaseConfigured || !supabase) {
-    return {
-      id: `local-${Date.now()}`,
-      ...contact,
-    };
+    console.error('Supabase is not configured');
+    return null;
   }
 
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getCurrentUser();
     if (!user) {
-      return { id: `local-${Date.now()}`, ...contact };
+      console.error('No authenticated Supabase user found when adding contact');
+      return null;
     }
 
     const { data, error } = await supabase
@@ -151,7 +180,7 @@ export async function updateEmergencyContact(id: string, contact: Partial<Omit<T
   }
 
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getCurrentUser();
     if (!user) return false;
 
     const { error } = await supabase
@@ -179,7 +208,7 @@ export async function deleteEmergencyContact(id: string): Promise<boolean> {
   }
 
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getCurrentUser();
     if (!user) return false;
 
     const { error } = await supabase
@@ -237,7 +266,7 @@ export async function createCommunityNote(note: CommunityNote): Promise<boolean>
   }
 
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getCurrentUser();
     const { error } = await supabase
       .from('community_notes')
       .insert({
@@ -274,7 +303,7 @@ export async function logJourneyStart(
   }
 
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getCurrentUser();
     if (!user) return null;
 
     const { data, error } = await supabase
