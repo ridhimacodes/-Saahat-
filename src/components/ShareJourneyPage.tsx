@@ -29,6 +29,7 @@ export const ShareJourneyPage: React.FC<ShareJourneyPageProps> = ({
   const [customName, setCustomName] = useState("");
   const [customPhone, setCustomPhone] = useState("");
   const [useCustomContact, setUseCustomContact] = useState(false);
+  const [isSavingContact, setIsSavingContact] = useState(false);
 
   // Sync saved emergency contacts from Supabase in background
   React.useEffect(() => {
@@ -259,27 +260,33 @@ export const ShareJourneyPage: React.FC<ShareJourneyPageProps> = ({
 
                   <button
                     type="button"
+                    disabled={isSavingContact || !customName.trim() || !customPhone.trim()}
                     onClick={async () => {
-                      if (!customName || !customPhone) return;
-                      const saved = await addEmergencyContact({
-                        name: customName,
-                        phone: customPhone,
-                        relationship: 'Trusted',
-                        avatarBg: 'bg-purple-600'
-                      });
-                      if (saved) {
-                        setContactsList(prev => [saved, ...prev]);
-                        setSelectedContact(saved);
-                        setCustomName("");
-                        setCustomPhone("");
-                        setUseCustomContact(false);
+                      if (!customName.trim() || !customPhone.trim()) return;
+                      setIsSavingContact(true);
+                      try {
+                        const saved = await addEmergencyContact({
+                          name: customName.trim(),
+                          phone: customPhone.trim(),
+                          relationship: 'Trusted',
+                          avatarBg: 'bg-purple-600'
+                        });
+                        if (saved) {
+                          setContactsList(prev => [saved, ...prev.filter(c => c.id !== saved.id)]);
+                          setSelectedContact(saved);
+                          setCustomName("");
+                          setCustomPhone("");
+                          setUseCustomContact(false);
+                        }
+                      } finally {
+                        setIsSavingContact(false);
                       }
                     }}
                     className={`w-full py-2.5 rounded-xl text-xs font-bold border transition-all ${
                       isLowSignalGlobal ? 'bg-slate-800 border-slate-700 text-amber-300 hover:bg-slate-700' : 'bg-purple-50 border-purple-200 text-brand-purple hover:bg-purple-100'
-                    }`}
+                    } ${isSavingContact ? 'opacity-70 cursor-wait' : ''}`}
                   >
-                    Save Contact to Account
+                    {isSavingContact ? "Saving..." : "Save Contact to Account"}
                   </button>
                 </div>
               )}

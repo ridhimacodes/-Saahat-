@@ -103,14 +103,28 @@ export async function saveUserProfile(profile: UserProfile): Promise<boolean> {
 // Emergency Contacts Service Layer
 // ---------------------------------------------------------------------------
 
+const CONTACTS_STORAGE_KEY = 'saahat_user_emergency_contacts';
+
 export async function fetchEmergencyContacts(): Promise<TrustedContact[]> {
+  let localContacts: TrustedContact[] = [];
+  try {
+    const raw = localStorage.getItem(CONTACTS_STORAGE_KEY);
+    if (raw) {
+      localContacts = JSON.parse(raw);
+    }
+  } catch (e) {
+    // Ignore localStorage parse errors
+  }
+
   if (!isSupabaseConfigured || !supabase) {
-    return [];
+    return localContacts;
   }
 
   try {
     const user = await getCurrentUser();
-    if (!user) return [];
+    if (!user) {
+      return localContacts;
+    }
 
     const { data, error } = await supabase
       .from('emergency_contacts')
@@ -119,60 +133,94 @@ export async function fetchEmergencyContacts(): Promise<TrustedContact[]> {
       .order('created_at', { ascending: true });
 
     if (error || !data) {
-      return [];
+      return localContacts;
     }
 
-    return data.map((item) => ({
+    const dbContacts = data.map((item) => ({
       id: item.id,
       name: item.name,
       phone: item.phone,
       relationship: item.relationship || 'Contact',
       avatarBg: item.avatar_bg || 'bg-purple-600',
     }));
+
+    // Merge and save locally for offline / refresh reliability
+    const merged = [...dbContacts];
+    localContacts.forEach(lc => {
+      if (!merged.some(m => m.id === lc.id || (m.name === lc.name && m.phone === lc.phone))) {
+        merged.push(lc);
+      }
+    });
+
+    try {
+      localStorage.setItem(CONTACTS_STORAGE_KEY, JSON.stringify(merged));
+    } catch (e) {}
+
+    return merged;
   } catch (err) {
     console.warn('Supabase fetchEmergencyContacts error:', err);
-    return [];
+    return localContacts;
   }
 }
 
 export async function addEmergencyContact(contact: Omit<TrustedContact, 'id'>): Promise<TrustedContact | null> {
-  if (!isSupabaseConfigured || !supabase) {
-    console.error('Supabase is not configured');
-    return null;
-  }
+  const newContact: TrustedContact = {
+    id: 'contact_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+    name: contact.name,
+    phone: contact.phone,
+    relationship: contact.relationship || 'Trusted',
+    avatarBg: contact.avatarBg || 'bg-purple-600',
+  };
 
+  // 1. Always persist to localStorage so contact immediately survives browser refresh
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      console.error('No authenticated Supabase user found when adding contact');
-      return null;
-    }
-
-    const { data, error } = await supabase
-      .from('emergency_contacts')
-      .insert({
-        user_id: user.id,
-        name: contact.name,
-        phone: contact.phone,
-        relationship: contact.relationship,
-        avatar_bg: contact.avatarBg,
-      })
-      .select()
-      .single();
-
-    if (error || !data) return null;
-
-    return {
-      id: data.id,
-      name: data.name,
-      phone: data.phone,
-      relationship: data.relationship,
-      avatarBg: data.avatar_bg,
-    };
-  } catch (err) {
-    console.warn('Supabase addEmergencyContact error:', err);
-    return null;
+    const raw = localStorage.getItem(CONTACTS_STORAGE_KEY);
+    const existing: TrustedContact[] = raw ? JSON.parse(raw) : [];
+    existing.unshift(newContact);
+    localStorage.setItem(CONTACTS_STORAGE_KEY, JSON.stringify(existing));
+  } catch (e) {
+    console.warn('LocalStorage save error:', e);
   }
+
+  // 2. If Supabase is configured, attempt database insert
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const user = await getCurrentUser();
+      if (user) {
+        const { data, error } = await supabase
+          .from('emergency_contacts')
+          .insert({
+            user_id: user.id,
+            name: contact.name,
+            phone: contact.phone,
+            relationship: contact.relationship,
+            avatar_bg: contact.avatarBg,
+          })
+          .select()
+          .single();
+
+        if (!error && data) {
+          // Update the id in local storage with the real Supabase id
+          newContact.id = data.id;
+          try {
+            const raw = localStorage.getItem(CONTACTS_STORAGE_KEY);
+            const existing: TrustedContact[] = raw ? JSON.parse(raw) : [];
+            const idx = existing.findIndex(c => c.name === contact.name && c.phone === contact.phone);
+            if (idx !== -1) {
+              existing[idx].id = data.id;
+              localStorage.setItem(CONTACTS_STORAGE_KEY, JSON.stringify(existing));
+            }
+          } catch (e) {}
+        } else if (error) {
+          console.warn('Supabase insert contact notice:', error.message);
+        }
+      }
+    } catch (err) {
+      console.warn('Supabase addEmergencyContact database error:', err);
+    }
+  }
+
+  return newContact;
 }
 export async function updateEmergencyContact(id: string, contact: Partial<Omit<TrustedContact, 'id'>>): Promise<boolean> {
   if (!isSupabaseConfigured || !supabase) {
@@ -203,13 +251,22 @@ export async function updateEmergencyContact(id: string, contact: Partial<Omit<T
 }
 
 export async function deleteEmergencyContact(id: string): Promise<boolean> {
+  try {
+    const raw = localStorage.getItem(CONTACTS_STORAGE_KEY);
+    if (raw) {
+      const existing: TrustedContact[] = JSON.parse(raw);
+      const filtered = existing.filter(c => c.id !== id);
+      localStorage.setItem(CONTACTS_STORAGE_KEY, JSON.stringify(filtered));
+    }
+  } catch (e) {}
+
   if (!isSupabaseConfigured || !supabase) {
     return true;
   }
 
   try {
     const user = await getCurrentUser();
-    if (!user) return false;
+    if (!user) return true;
 
     const { error } = await supabase
       .from('emergency_contacts')
@@ -220,7 +277,7 @@ export async function deleteEmergencyContact(id: string): Promise<boolean> {
     return !error;
   } catch (err) {
     console.warn('Supabase deleteEmergencyContact error:', err);
-    return false;
+    return true;
   }
 }
 

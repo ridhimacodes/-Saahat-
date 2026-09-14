@@ -14,7 +14,7 @@ import {
   RefreshCw,
   Info
 } from 'lucide-react';
-import { RouteOption, TimeOfDay } from '../types';
+import { RouteOption, TimeOfDay, UserProfile } from '../types';
 import { getAssistantResponse, AssistantMessage } from '../services/assistantService';
 
 interface SaahatAssistantProps {
@@ -24,6 +24,7 @@ interface SaahatAssistantProps {
   destination?: string;
   timeOfDay: TimeOfDay;
   isLowSignalGlobal: boolean;
+  userProfile?: UserProfile | null;
   onTriggerSOS: () => void;
 }
 
@@ -31,7 +32,7 @@ const INITIAL_MESSAGES: AssistantMessage[] = [
   {
     id: 'msg-welcome',
     sender: 'assistant',
-    text: "Hi, I'm your Saahat Assistant — ask me anything about your journey, lighting, or safety features!",
+    text: "Hi, I'm Saarthi — your journey guide. Ask me anything about your route or the app.",
     timestamp: 'Just now',
     quickReplies: [
       "Why is this route rated high?",
@@ -49,6 +50,7 @@ export const SaahatAssistant: React.FC<SaahatAssistantProps> = ({
   destination,
   timeOfDay,
   isLowSignalGlobal,
+  userProfile,
   onTriggerSOS
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -97,7 +99,8 @@ export const SaahatAssistant: React.FC<SaahatAssistantProps> = ({
           origin,
           destination,
           timeOfDay,
-          isLowSignalGlobal
+          isLowSignalGlobal,
+          userProfile
         });
 
         const assistantMsg: AssistantMessage = {
@@ -116,9 +119,9 @@ export const SaahatAssistant: React.FC<SaahatAssistantProps> = ({
           {
             id: `bot-err-${Date.now()}`,
             sender: 'assistant',
-            text: "I'm having a little trouble connecting, but I'm right here. For immediate safety concerns, please tap the SOS button!",
+            text: "Saarthi is having trouble responding right now, try again in a moment.",
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            isSOSPrompt: true
+            quickReplies: ["Why is this route rated high?", "What does Low Signal Mode do?", "How does Share ETA work?"]
           }
         ]);
       } finally {
@@ -155,8 +158,8 @@ export const SaahatAssistant: React.FC<SaahatAssistantProps> = ({
               ? 'bg-slate-900 border-amber-400 text-amber-400 shadow-amber-500/20'
               : 'bg-gradient-to-tr from-[#6C2BD9] via-[#8B5CF6] to-[#FF4D8D] border-white/90 text-white shadow-purple-600/40'
           }`}
-          aria-label="Open Saahat Assistant"
-          title="Saahat Assistant"
+          aria-label="Open Saarthi"
+          title="Saarthi"
         >
           {/* Subtle Glow Ring */}
           <span className="absolute inset-0 rounded-full bg-pink-500 animate-ping opacity-20 pointer-events-none" />
@@ -185,7 +188,7 @@ export const SaahatAssistant: React.FC<SaahatAssistantProps> = ({
             <div className="hidden lg:block absolute left-full ml-3 px-3 py-1.5 rounded-xl bg-slate-900/90 text-white text-xs font-semibold whitespace-nowrap backdrop-blur-sm pointer-events-none shadow-lg border border-slate-700/50">
               <span className="flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-pink-400" />
-                Saahat Assistant
+                Saarthi
               </span>
             </div>
           )}
@@ -219,7 +222,7 @@ export const SaahatAssistant: React.FC<SaahatAssistantProps> = ({
                 </div>
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <h3 className="font-extrabold text-base tracking-tight leading-tight">Saahat Assistant</h3>
+                    <h3 className="font-extrabold text-base tracking-tight leading-tight">Saarthi</h3>
                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                   </div>
                   <p className="text-[11px] text-purple-100/90 font-medium">
@@ -357,7 +360,7 @@ export const SaahatAssistant: React.FC<SaahatAssistantProps> = ({
                     <span className="w-2 h-2 rounded-full bg-pink-500 animate-bounce [animation-delay:-0.3s]" />
                     <span className="w-2 h-2 rounded-full bg-purple-600 animate-bounce [animation-delay:-0.15s]" />
                     <span className="w-2 h-2 rounded-full bg-pink-400 animate-bounce" />
-                    <span className="text-[11px] text-slate-400 font-medium ml-1">Saahat is thinking...</span>
+                    <span className="text-[11px] text-slate-400 font-medium ml-1">Saarthi is thinking...</span>
                   </div>
                 </div>
               )}

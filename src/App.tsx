@@ -309,7 +309,7 @@ export function App() {
         onCloseDirectly={() => setIsSOSOpenDirectly(false)}
       />
 
-      {/* Persistent Saahat Assistant Chatbot (Bottom-Left Corner) */}
+      {/* Persistent Saarthi Chatbot (Bottom-Left Corner) */}
       <SaahatAssistant
         activePage={activePage}
         selectedRoute={selectedRoute}
@@ -317,6 +317,7 @@ export function App() {
         destination={destination}
         timeOfDay={timeOfDay}
         isLowSignalGlobal={isLowSignalGlobal}
+        userProfile={userProfile}
         onTriggerSOS={() => setIsSOSOpenDirectly(true)}
       />
 
@@ -374,6 +375,15 @@ export function App() {
                     value={userProfile.name}
                     placeholder="Enter your name"
                     onChange={(e) => setUserProfile(prev => ({ ...prev, name: e.target.value }))}
+                    onKeyDown={async (e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        await saveUserProfile(userProfile);
+                        const refreshed = await fetchUserProfile();
+                        if (refreshed) setUserProfile(refreshed);
+                        setIsProfileModalOpen(false);
+                      }
+                    }}
                     className="text-xl font-bold text-slate-900 text-center w-full border-b border-purple-200 focus:border-brand-purple outline-hidden bg-transparent pb-1"
                   />
                   <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-purple-100 text-brand-purple text-xs font-bold mt-1">
@@ -402,8 +412,11 @@ export function App() {
 
               <div className="pt-2">
                 <button
+                  type="button"
                   onClick={async () => {
                     await saveUserProfile(userProfile);
+                    const refreshed = await fetchUserProfile();
+                    if (refreshed) setUserProfile(refreshed);
                     setIsProfileModalOpen(false);
                   }}
                   className="w-full py-3 rounded-xl bg-purple-600 text-white font-bold text-sm hover:bg-purple-700 hover:scale-105 transition-all"
