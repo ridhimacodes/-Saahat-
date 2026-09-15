@@ -6,26 +6,71 @@ import { INITIAL_USER_PROFILE, TRUSTED_CONTACTS, INITIAL_COMMUNITY_NOTES } from 
 // Authentication & Session Helper
 // ---------------------------------------------------------------------------
 
-export async function getCurrentUser() {
+export async function getCurrentUser(): Promise<any> {
   if (!isSupabaseConfigured || !supabase) return null;
-  const { data: { user } } = await supabase.auth.getUser();
-  if (user) return user;
-
-  // Try retrieving active session
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session?.user) return session.user;
-
-  // If no session exists yet, automatically sign in anonymously so RLS has an authentic auth.uid()
   try {
-    const { data: anonAuth, error } = await supabase.auth.signInAnonymously();
-    if (!error && anonAuth.user) {
-      return anonAuth.user;
-    }
-  } catch (e) {
-    // If anonymous sign-in is not enabled on the Supabase project, return null
-  }
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) return user;
 
-  return null;
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.user || null;
+  } catch (err) {
+    console.warn('getCurrentUser error:', err);
+    return null;
+  }
+}
+
+export async function signUpWithEmail(
+  email: string, 
+  password: string
+): Promise<{ user: any; session: any; error: string | null }> {
+  if (!isSupabaseConfigured || !supabase) {
+    return { user: null, session: null, error: 'Supabase is not configured' };
+  }
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim(),
+      password: password
+    });
+    if (error) {
+      return { user: null, session: null, error: error.message };
+    }
+    return { user: data.user, session: data.session, error: null };
+  } catch (err: any) {
+    return { user: null, session: null, error: err.message || 'Signup failed' };
+  }
+}
+
+export async function signInWithEmail(
+  email: string, 
+  password: string
+): Promise<{ user: any; session: any; error: string | null }> {
+  if (!isSupabaseConfigured || !supabase) {
+    return { user: null, session: null, error: 'Supabase is not configured' };
+  }
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password: password
+    });
+    if (error) {
+      return { user: null, session: null, error: error.message };
+    }
+    return { user: data.user, session: data.session, error: null };
+  } catch (err: any) {
+    return { user: null, session: null, error: err.message || 'Login failed' };
+  }
+}
+
+export async function signOutUser(): Promise<boolean> {
+  if (!isSupabaseConfigured || !supabase) return true;
+  try {
+    const { error } = await supabase.auth.signOut();
+    return !error;
+  } catch (err) {
+    console.warn('Sign out error:', err);
+    return false;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -48,8 +93,7 @@ export async function fetchUserProfile(): Promise<UserProfile> {
       .maybeSingle();
 
     if (error || !data) {
-      // Derive name directly from authentic auth user
-      const authName = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'My Profile';
+      const authName = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || '';
       const authAvatar = user.user_metadata?.avatar_url || user.user_metadata?.picture || INITIAL_USER_PROFILE.avatarUrl;
       return {
         name: authName,
@@ -59,7 +103,7 @@ export async function fetchUserProfile(): Promise<UserProfile> {
     }
 
     return {
-      name: data.name || user.email?.split('@')[0] || 'My Profile',
+      name: data.name || user.email?.split('@')[0] || '',
       avatarUrl: data.avatar_url || INITIAL_USER_PROFILE.avatarUrl,
       savedLocations: data.saved_locations || [],
     };
@@ -84,17 +128,24 @@ export async function saveUserProfile(profile: UserProfile): Promise<boolean> {
 
     const { error } = await supabase
       .from('profiles')
-      .upsert({
-        id: user.id,
-        name: profile.name,
-        avatar_url: profile.avatarUrl,
-        saved_locations: profile.savedLocations,
-        updated_at: new Date().toISOString(),
-      });
+      .upsert(
+        {
+          id: user.id,
+          name: profile.name,
+          avatar_url: profile.avatarUrl,
+          saved_locations: profile.savedLocations,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'id' }
+      );
 
-    return !error;
+    if (error) {
+      console.error('Supabase saveUserProfile error:', error.message, error.details, error.hint);
+      return false;
+    }
+    return true;
   } catch (err) {
-    console.warn('Supabase saveUserProfile error:', err);
+    console.error('Supabase saveUserProfile exception:', err);
     return false;
   }
 }
@@ -103,27 +154,15 @@ export async function saveUserProfile(profile: UserProfile): Promise<boolean> {
 // Emergency Contacts Service Layer
 // ---------------------------------------------------------------------------
 
-const CONTACTS_STORAGE_KEY = 'saahat_user_emergency_contacts';
-
 export async function fetchEmergencyContacts(): Promise<TrustedContact[]> {
-  let localContacts: TrustedContact[] = [];
-  try {
-    const raw = localStorage.getItem(CONTACTS_STORAGE_KEY);
-    if (raw) {
-      localContacts = JSON.parse(raw);
-    }
-  } catch (e) {
-    // Ignore localStorage parse errors
-  }
-
   if (!isSupabaseConfigured || !supabase) {
-    return localContacts;
+    return [];
   }
 
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return localContacts;
+      return [];
     }
 
     const { data, error } = await supabase
@@ -133,94 +172,64 @@ export async function fetchEmergencyContacts(): Promise<TrustedContact[]> {
       .order('created_at', { ascending: true });
 
     if (error || !data) {
-      return localContacts;
+      console.warn('Supabase fetchEmergencyContacts error:', error?.message);
+      return [];
     }
 
-    const dbContacts = data.map((item) => ({
+    return data.map((item) => ({
       id: item.id,
       name: item.name,
       phone: item.phone,
       relationship: item.relationship || 'Contact',
       avatarBg: item.avatar_bg || 'bg-purple-600',
     }));
-
-    // Merge and save locally for offline / refresh reliability
-    const merged = [...dbContacts];
-    localContacts.forEach(lc => {
-      if (!merged.some(m => m.id === lc.id || (m.name === lc.name && m.phone === lc.phone))) {
-        merged.push(lc);
-      }
-    });
-
-    try {
-      localStorage.setItem(CONTACTS_STORAGE_KEY, JSON.stringify(merged));
-    } catch (e) {}
-
-    return merged;
   } catch (err) {
     console.warn('Supabase fetchEmergencyContacts error:', err);
-    return localContacts;
+    return [];
   }
 }
 
 export async function addEmergencyContact(contact: Omit<TrustedContact, 'id'>): Promise<TrustedContact | null> {
-  const newContact: TrustedContact = {
-    id: 'contact_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
-    name: contact.name,
-    phone: contact.phone,
-    relationship: contact.relationship || 'Trusted',
-    avatarBg: contact.avatarBg || 'bg-purple-600',
-  };
+  if (!isSupabaseConfigured || !supabase) {
+    console.error('Supabase is not configured');
+    return null;
+  }
 
-  // 1. Always persist to localStorage so contact immediately survives browser refresh
   try {
-    const raw = localStorage.getItem(CONTACTS_STORAGE_KEY);
-    const existing: TrustedContact[] = raw ? JSON.parse(raw) : [];
-    existing.unshift(newContact);
-    localStorage.setItem(CONTACTS_STORAGE_KEY, JSON.stringify(existing));
-  } catch (e) {
-    console.warn('LocalStorage save error:', e);
-  }
-
-  // 2. If Supabase is configured, attempt database insert
-  if (isSupabaseConfigured && supabase) {
-    try {
-      const user = await getCurrentUser();
-      if (user) {
-        const { data, error } = await supabase
-          .from('emergency_contacts')
-          .insert({
-            user_id: user.id,
-            name: contact.name,
-            phone: contact.phone,
-            relationship: contact.relationship,
-            avatar_bg: contact.avatarBg,
-          })
-          .select()
-          .single();
-
-        if (!error && data) {
-          // Update the id in local storage with the real Supabase id
-          newContact.id = data.id;
-          try {
-            const raw = localStorage.getItem(CONTACTS_STORAGE_KEY);
-            const existing: TrustedContact[] = raw ? JSON.parse(raw) : [];
-            const idx = existing.findIndex(c => c.name === contact.name && c.phone === contact.phone);
-            if (idx !== -1) {
-              existing[idx].id = data.id;
-              localStorage.setItem(CONTACTS_STORAGE_KEY, JSON.stringify(existing));
-            }
-          } catch (e) {}
-        } else if (error) {
-          console.warn('Supabase insert contact notice:', error.message);
-        }
-      }
-    } catch (err) {
-      console.warn('Supabase addEmergencyContact database error:', err);
+    const user = await getCurrentUser();
+    if (!user) {
+      console.error('Supabase addEmergencyContact: no authenticated user');
+      return null;
     }
-  }
 
-  return newContact;
+    const { data, error } = await supabase
+      .from('emergency_contacts')
+      .insert({
+        user_id: user.id,
+        name: contact.name,
+        phone: contact.phone,
+        relationship: contact.relationship,
+        avatar_bg: contact.avatarBg,
+      })
+      .select()
+      .single();
+
+    if (error || !data) {
+      console.error('Supabase insert contact error:', error?.message, error?.details, error?.hint);
+      return null;
+    }
+
+    return {
+      id: data.id,
+      name: data.name,
+      phone: data.phone,
+      relationship: data.relationship,
+      avatarBg: data.avatar_bg,
+    };
+  } catch (err) {
+    console.error('Supabase addEmergencyContact exception:', err);
+    return null;
+  }
 }
 export async function updateEmergencyContact(id: string, contact: Partial<Omit<TrustedContact, 'id'>>): Promise<boolean> {
   if (!isSupabaseConfigured || !supabase) {
@@ -251,22 +260,13 @@ export async function updateEmergencyContact(id: string, contact: Partial<Omit<T
 }
 
 export async function deleteEmergencyContact(id: string): Promise<boolean> {
-  try {
-    const raw = localStorage.getItem(CONTACTS_STORAGE_KEY);
-    if (raw) {
-      const existing: TrustedContact[] = JSON.parse(raw);
-      const filtered = existing.filter(c => c.id !== id);
-      localStorage.setItem(CONTACTS_STORAGE_KEY, JSON.stringify(filtered));
-    }
-  } catch (e) {}
-
   if (!isSupabaseConfigured || !supabase) {
     return true;
   }
 
   try {
     const user = await getCurrentUser();
-    if (!user) return true;
+    if (!user) return false;
 
     const { error } = await supabase
       .from('emergency_contacts')
@@ -274,10 +274,14 @@ export async function deleteEmergencyContact(id: string): Promise<boolean> {
       .eq('id', id)
       .eq('user_id', user.id);
 
-    return !error;
+    if (error) {
+      console.error('Supabase deleteEmergencyContact error:', error.message);
+      return false;
+    }
+    return true;
   } catch (err) {
     console.warn('Supabase deleteEmergencyContact error:', err);
-    return true;
+    return false;
   }
 }
 

@@ -36,6 +36,7 @@ export const ShareJourneyPage: React.FC<ShareJourneyPageProps> = ({
   const [customPhone, setCustomPhone] = useState("");
   const [useCustomContact, setUseCustomContact] = useState(false);
   const [isSavingContact, setIsSavingContact] = useState(false);
+  const [contactNotice, setContactNotice] = useState<string | null>(null);
   const [sharedETAHistory, setSharedETAHistory] = useState<SharedETAHistoryItem[]>(() => getSharedETAHistory());
 
   // Sync saved emergency contacts from Supabase in background
@@ -44,6 +45,8 @@ export const ShareJourneyPage: React.FC<ShareJourneyPageProps> = ({
       if (loaded && loaded.length > 0) {
         setContactsList(loaded);
         setSelectedContact(loaded[0]);
+      } else {
+        setContactsList([]);
       }
     });
   }, []);
@@ -79,6 +82,12 @@ export const ShareJourneyPage: React.FC<ShareJourneyPageProps> = ({
   const handleShareETA = (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Validate that a phone number is available
+    if (!contactPhone || !contactPhone.trim()) {
+      alert('Please select or add an emergency contact with a phone number before sharing.');
+      return;
+    }
+
     // Record strictly to Shared ETA History: who we shared with and what route was shared
     const updatedHistory = addSharedETAHistory({
       recipientName: contactName,
@@ -90,11 +99,49 @@ export const ShareJourneyPage: React.FC<ShareJourneyPageProps> = ({
     });
     setSharedETAHistory(updatedHistory);
 
+    // If journey hasn't started yet, start the journey first
     if (!isJourneyStarted && onStartJourney) {
       onStartJourney();
-      return;
     }
-    setIsShared(true);
+
+    // Format the phone number for wa.me (remove spaces/dashes, add country code if missing)
+    let cleanPhone = contactPhone.replace(/[\s\-\(\)]/g, '');
+    // If no country code prefix, assume India (+91)
+    if (!cleanPhone.startsWith('+') && !cleanPhone.startsWith('91')) {
+      cleanPhone = '91' + cleanPhone;
+    } else if (cleanPhone.startsWith('+')) {
+      cleanPhone = cleanPhone.substring(1); // remove the leading +
+    }
+
+    // Helper to open WhatsApp with a given message
+    const openWhatsApp = (message: string) => {
+      const encodedMessage = encodeURIComponent(message);
+      const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
+      window.open(whatsappUrl, '_blank');
+      setIsShared(true);
+    };
+
+    // Try to get current location and include it in the message
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          const mapsLink = `https://www.google.com/maps?q=${latitude},${longitude}`;
+          const message = `🛡️ Saahat Safety Update\n\nHi, I'm on my way via ${routeDisplayName}.\n⏱️ ETA: ${arrivalTime} (~${routeDuration} mins)\n📍 My current location: ${mapsLink}\n\nPowered by Saahat — Safe Journeys for Women.`;
+          openWhatsApp(message);
+        },
+        (_geoError) => {
+          // Location denied or unavailable — send message without location
+          const message = `🛡️ Saahat Safety Update\n\nHi, I'm on my way via ${routeDisplayName}.\n⏱️ ETA: ${arrivalTime} (~${routeDuration} mins)\n📍 Location unavailable (permission not granted)\n\nPowered by Saahat — Safe Journeys for Women.`;
+          openWhatsApp(message);
+        },
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
+      );
+    } else {
+      // Geolocation API not available — send without location
+      const message = `🛡️ Saahat Safety Update\n\nHi, I'm on my way via ${routeDisplayName}.\n⏱️ ETA: ${arrivalTime} (~${routeDuration} mins)\n\nPowered by Saahat — Safe Journeys for Women.`;
+      openWhatsApp(message);
+    }
   };
 
   const handleCopyMessage = () => {
@@ -282,12 +329,19 @@ export const ShareJourneyPage: React.FC<ShareJourneyPageProps> = ({
                     />
                   </div>
 
+                  {contactNotice && (
+                    <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-medium">
+                      {contactNotice}
+                    </div>
+                  )}
+
                   <button
                     type="button"
                     disabled={isSavingContact || !customName.trim() || !customPhone.trim()}
                     onClick={async () => {
                       if (!customName.trim() || !customPhone.trim()) return;
                       setIsSavingContact(true);
+                      setContactNotice(null);
                       try {
                         const saved = await addEmergencyContact({
                           name: customName.trim(),
@@ -301,6 +355,9 @@ export const ShareJourneyPage: React.FC<ShareJourneyPageProps> = ({
                           setCustomName("");
                           setCustomPhone("");
                           setUseCustomContact(false);
+                          setContactNotice(null);
+                        } else {
+                          setContactNotice("Could not save to account. Please sign in via the Profile menu (top-right avatar) first.");
                         }
                       } finally {
                         setIsSavingContact(false);
@@ -310,7 +367,7 @@ export const ShareJourneyPage: React.FC<ShareJourneyPageProps> = ({
                       isLowSignalGlobal ? 'bg-slate-800 border-slate-700 text-amber-300 hover:bg-slate-700' : 'bg-purple-50 border-purple-200 text-brand-purple hover:bg-purple-100'
                     } ${isSavingContact ? 'opacity-70 cursor-wait' : ''}`}
                   >
-                    {isSavingContact ? "Saving..." : "Save Contact to Account"}
+                    {isSavingContact ? "Saving to Supabase..." : "Save Contact to Account"}
                   </button>
                 </div>
               )}

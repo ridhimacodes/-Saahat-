@@ -140,14 +140,16 @@ export async function getAssistantResponse(
     };
   }
 
-  // 2. Try Lovable AI Connector if configured in browser environment
-  const lovableApiKey = (typeof window !== 'undefined' && (window as any).LOVABLE_API_KEY) || (import.meta as any).env?.VITE_LOVABLE_API_KEY;
-  if (lovableApiKey) {
+  // 2. Try Gemini AI if API key is configured
+  const geminiApiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  console.log('[Saarthi] Gemini API key present:', !!geminiApiKey, geminiApiKey ? `(starts with: ${geminiApiKey.substring(0, 6)}...)` : '(not set)');
+  if (geminiApiKey) {
     try {
-      const response = await fetchLovableAI(userQuery, context, contextBlock, lovableApiKey);
+      const response = await fetchGeminiAI(userQuery, contextBlock, geminiApiKey);
+      console.log('[Saarthi] Gemini response:', response ? 'SUCCESS' : 'NULL (falling back to local)');
       if (response) return response;
     } catch (e) {
-      console.warn("Lovable AI connector failed, falling back to built-in Saahat intelligence:", e);
+      console.warn("[Saarthi] Gemini AI failed, falling back to built-in Saahat intelligence:", e);
     }
   }
 
@@ -513,54 +515,79 @@ function getLocalAssistantResponse(
 }
 
 /**
- * Optional Lovable AI connector integration
+ * Google Gemini AI integration for intelligent context-aware responses
  */
-async function fetchLovableAI(
+async function fetchGeminiAI(
   userQuery: string,
-  context: AssistantContext,
   contextBlock: string,
   apiKey: string
 ): Promise<{ text: string; isSOSPrompt?: boolean; quickReplies?: string[] } | null> {
-  const systemPrompt = `You are Saarthi, the in-app guide for Saahat, a women's context-aware travel safety app. You have access to the following real-time data about the user's current route and app state:
+  const systemInstruction = `You are Saarthi, the in-app AI guide for Saahat — a women's context-aware travel safety app built for India.
+
+You have access to the following REAL-TIME app state and route data:
 
 ${contextBlock}
 
-Answer questions using this real data specifically — reference actual scores, actual pros/cons, and actual feature names. Do not give vague or generic safety advice; use the specific information provided. If asked about a feature, explain exactly what it does in this app, not travel safety in general.
-
-Tone & Guidelines:
-1. Tone: Warm, empowering, factual, calm, and non-alarming.
-2. If asked "Why is this route the best match?", cite the exact route comfort score, specific pros, and environmental ratings.
-3. If asked about features (Low Signal Mode, Share ETA, SOS, Community Notes, Avatar/Profile), explain the exact app mechanics.
-4. If asked about the Circle or emergency contacts, reference the user's actual contacts if listed, or explain how to add them.
-5. If the question falls outside what the app can help with, say so clearly and helpfully: "I can't help with that directly, but I can tell you about your route options or app features."
-6. If the user expresses emergency or distress, stay calm and instruct them to open the SOS Emergency Console immediately.`;
+Rules:
+1. Tone: Warm, empowering, factual, calm, and non-alarming. Keep responses concise (2-4 sentences max).
+2. Use the SPECIFIC data above — reference actual comfort scores, actual pros/cons, actual lighting descriptions, and actual feature names.
+3. Do NOT give vague or generic safety advice. Use the specific route information provided.
+4. If asked "Why is this route the best match?", cite the exact comfort score, specific pros, and environmental ratings from the data above.
+5. If asked about features (Low Signal Mode, Share ETA, SOS, Community Notes, Profile), explain the exact app mechanics.
+6. If asked about the Circle or emergency contacts, reference the user's actual contacts if listed, or explain how to add them.
+7. If the question falls outside the app's scope, say: "I can't help with that directly, but I can tell you about your route options or app features."
+8. If the user expresses distress or emergency, stay calm and instruct them to use the SOS Emergency button immediately.
+9. Do NOT use markdown formatting, bullet points, or numbered lists. Reply in plain conversational text.
+10. Do NOT include any emojis in your response.`;
 
   try {
-    const res = await fetch("https://api.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userQuery }
-        ],
-        max_tokens: 300,
-        temperature: 0.6
-      })
-    });
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          system_instruction: {
+            parts: [{ text: systemInstruction }]
+          },
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: userQuery }]
+            }
+          ],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 250,
+            topP: 0.9
+          }
+        })
+      }
+    );
 
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const errBody = await res.text();
+      console.warn('Gemini API error:', res.status, errBody);
+      return null;
+    }
+
     const data = await res.json();
-    const text = data?.choices?.[0]?.message?.content?.trim();
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
     if (!text) return null;
 
-    return { text };
+    // Check if Gemini's response indicates distress/SOS
+    const lowerText = text.toLowerCase();
+    const isSOSPrompt = lowerText.includes('sos') || lowerText.includes('emergency console') || lowerText.includes('call police');
+
+    return {
+      text,
+      isSOSPrompt,
+      quickReplies: isSOSPrompt
+        ? ["Open SOS Emergency", "I'm Safe Now"]
+        : ["Why is this route the best match?", "What does Low Signal Mode do?", "What's in my Circle?"]
+    };
   } catch (err) {
-    console.warn("Lovable API network error:", err);
+    console.warn("Gemini API network error:", err);
     return null;
   }
 }
