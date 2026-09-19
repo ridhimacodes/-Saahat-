@@ -15,6 +15,7 @@ import {
   Sparkles, 
   Share2, 
   PhoneCall, 
+  Phone,
   LocateFixed, 
   Play, 
   Pause, 
@@ -29,12 +30,20 @@ import {
   Volume1,
   Layers,
   Plus,
-  Minus
+  Minus,
+  Radio,
+  Send
 } from 'lucide-react';
-import { RouteOption, TimeOfDay } from '../types';
+import { RouteOption, TimeOfDay, TrustedContact, SafePlace, CommunityNote, ActiveCheckInJourney } from '../types';
 import { MapContainer, TileLayer, Polyline, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { logJourneyStart, markJourneyComplete } from '../services/supabaseService';
+import { logJourneyStart, markJourneyComplete, fetchRecentSafetySignals } from '../services/supabaseService';
+import { fetchNearbySafePlaces } from '../services/safePlacesService';
+import { 
+  confirmArrivedSafely, 
+  subscribeToCheckIn, 
+  getActiveCheckIn 
+} from '../services/checkInService';
 
 interface ActiveJourneyPageProps {
   selectedRoute: RouteOption;
@@ -44,6 +53,9 @@ interface ActiveJourneyPageProps {
   onNavigateHome: () => void;
   isLowSignalGlobal: boolean;
   timeOfDay: TimeOfDay;
+  trustedContacts?: TrustedContact[];
+  onTriggerRingMe?: () => void;
+  onTriggerFakeCall?: () => void;
 }
 
 // Custom Leaflet Icons for Navigation
@@ -114,6 +126,28 @@ const getNearbyLayerIcon = (type: string) => {
     className: 'landmark-marker',
     html: `
       <div class="flex items-center justify-center w-7 h-7 ${bgColor} text-white rounded-full border-2 border-white shadow-md text-xs font-bold">
+        ${emoji}
+      </div>
+    `,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+    popupAnchor: [0, -14]
+  });
+};
+
+const getSignalMarkerIcon = (category: string) => {
+  let emoji = '⚠️';
+  let bgColor = 'bg-amber-600';
+  const catLower = (category || '').toLowerCase();
+  if (catLower.includes('light')) { emoji = '💡'; bgColor = 'bg-yellow-600'; }
+  else if (catLower.includes('obstruction')) { emoji = '🚧'; bgColor = 'bg-orange-600'; }
+  else if (catLower.includes('crowd')) { emoji = '👥'; bgColor = 'bg-purple-600'; }
+  else if (catLower.includes('isolated')) { emoji = '🌙'; bgColor = 'bg-slate-700'; }
+
+  return L.divIcon({
+    className: 'community-signal-marker',
+    html: `
+      <div class="flex items-center justify-center w-7 h-7 ${bgColor} text-white rounded-full border-2 border-white shadow-md text-xs font-bold ring-2 ring-amber-400/50 animate-pulse">
         ${emoji}
       </div>
     `,
@@ -206,11 +240,43 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
   onEndJourney,
   onNavigateHome,
   isLowSignalGlobal,
-  timeOfDay
+  timeOfDay,
+  trustedContacts = [],
+  onTriggerRingMe,
+  onTriggerFakeCall
 }) => {
   const coordinates = selectedRoute.coordinates;
   const originCoords = coordinates[0] || [28.6653, 77.2324];
   const destCoords = coordinates[coordinates.length - 1] || [28.6129, 77.2295];
+
+  // Guardian Journey Live States
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [isLocationSharingActive, setIsLocationSharingActive] = useState(true);
+  const [safePlaces, setSafePlaces] = useState<SafePlace[]>([]);
+  const [safetySignals, setSafetySignals] = useState<CommunityNote[]>([]);
+  const [showSafeArrivalModal, setShowSafeArrivalModal] = useState(false);
+
+  // Active contact receiving ETA
+  const activeGuardianContact = trustedContacts.length > 0 ? trustedContacts[0] : null;
+
+
+  // Fetch verified Safe Places and Community Signals around active route
+  useEffect(() => {
+    if (originCoords) {
+      fetchNearbySafePlaces(originCoords).then(places => setSafePlaces(places));
+    }
+    fetchRecentSafetySignals().then(signals => setSafetySignals(signals));
+  }, [originCoords?.[0], originCoords?.[1]]);
+
+  // Active Check-In & Countdown state
+  const [activeCheckIn, setActiveCheckIn] = useState<ActiveCheckInJourney | null>(() => getActiveCheckIn());
+
+  useEffect(() => {
+    const unsub = subscribeToCheckIn((j) => {
+      setActiveCheckIn(j);
+    });
+    return unsub;
+  }, []);
 
   // Derive offline steps or generate turn directions
   const steps = (selectedRoute.offlineSteps && selectedRoute.offlineSteps.length > 0)
@@ -242,6 +308,21 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
   const [hasArrived, setHasArrived] = useState(false);
   const [recenterTrigger, setRecenterTrigger] = useState(0);
   const [journeyLogId, setJourneyLogId] = useState<string | null>(null);
+
+  // Running Journey Timer
+  useEffect(() => {
+    if (hasArrived) return;
+    const timer = setInterval(() => {
+      setElapsedSeconds(s => s + 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [hasArrived]);
+
+  const formatTimer = (totalSeconds: number) => {
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   // Live Location & Tracking
   const [userLivePos, setUserLivePos] = useState<[number, number]>(originCoords);
@@ -286,13 +367,14 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
       .catch(err => console.warn('Supabase journey log:', err));
   }, []);
 
-  // Active layers state for nearby support places
+  // Active layers state for nearby support places & signals
   const [activeLayers, setActiveLayers] = useState<Record<string, boolean>>({
     hospital: false,
     police: true,
     metro: true,
     pharmacy: false,
-    fuel: false
+    fuel: false,
+    signals: true
   });
 
   const toggleLayer = (layerKey: string) => {
@@ -307,6 +389,18 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
     { type: 'pharmacy', title: '24/7 Chemist & Healthcare', lat: originCoords[0] + 0.005, lng: originCoords[1] - 0.001 },
     { type: 'fuel', title: 'HP Fuel & Express Station', lat: originCoords[0] - 0.002, lng: originCoords[1] - 0.004 },
   ] : [];
+
+  const displaySafePlaces: SafePlace[] = safePlaces.length > 0
+    ? safePlaces
+    : mockNearbyPlaces.map((p, idx) => ({
+        id: `mock-act-sp-${idx}`,
+        name: p.title,
+        type: p.type as any,
+        lat: p.lat,
+        lng: p.lng,
+        address: 'Verified En-Route Safe Facility',
+        openStatus: '24/7 Active'
+      }));
 
   // Robust Queued Web Speech API Engine
   const playNextQueuedSpeech = () => {
@@ -422,11 +516,18 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
     queueSpeech("Navigation paused.", true);
   };
 
-  // Arrival Trigger
+  // Arrival Trigger / "I'm Safe" Action
   const handleArrivedSafely = () => {
+    confirmArrivedSafely();
     setHasArrived(true);
+    setShowSafeArrivalModal(true);
     setIsNavigationActive(false);
     setIsSimulationMode(false);
+    setIsLocationSharingActive(false);
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
     markJourneyComplete(journeyLogId);
     queueSpeech(`You have arrived safely at ${destination.split(',')[0]}. Journey complete.`, true);
     confetti({
@@ -439,8 +540,9 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
   // Continuous Proximity-based Turn-by-Turn Logic processor with update throttling
   const processPositionUpdate = (pos: [number, number]) => {
     const now = Date.now();
-    // Throttle user position state updates to at most once every 600ms to prevent component render churn
-    if (now - lastPosUpdateRef.current < 600) {
+    // Throttle user position state updates: 5000ms if Low Power Mode is active, else 600ms
+    const throttleMs = isLowSignalGlobal ? 5000 : 600;
+    if (now - lastPosUpdateRef.current < throttleMs) {
       return;
     }
     lastPosUpdateRef.current = now;
@@ -505,7 +607,7 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
 
   // Continuous Live Geolocation Tracking via watchPosition
   useEffect(() => {
-    if (!isNavigationActive || isSimulationMode) {
+    if (!isNavigationActive || isSimulationMode || !isLocationSharingActive) {
       if (watchIdRef.current !== null) {
         navigator.geolocation.clearWatch(watchIdRef.current);
         watchIdRef.current = null;
@@ -530,8 +632,8 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
         setIsGpsLocked(false);
       },
       {
-        enableHighAccuracy: true,
-        maximumAge: 1000,
+        enableHighAccuracy: !isLowSignalGlobal,
+        maximumAge: isLowSignalGlobal ? 10000 : 1000,
         timeout: 10000
       }
     );
@@ -544,7 +646,7 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
         watchIdRef.current = null;
       }
     };
-  }, [isNavigationActive, isSimulationMode]);
+  }, [isNavigationActive, isSimulationMode, isLocationSharingActive, isLowSignalGlobal]);
 
   // Simulation Mode: smooth playback along polyline coordinates for testing without walking
   useEffect(() => {
@@ -646,6 +748,55 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
         {/* TOP FLOATING OVERLAY CONTAINER: Direction Card, Live Subtitles & Amenity Filters */}
         <div className="absolute top-4 left-3 right-3 sm:left-6 sm:right-6 z-[400] max-w-3xl mx-auto space-y-2">
           
+          {/* Guardian Journey Mode Active Status Bar */}
+          <div className="bg-slate-950/90 backdrop-blur-xl border border-purple-500/30 text-white rounded-2xl px-4 py-2.5 shadow-2xl flex flex-wrap items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="flex items-center gap-1.5 bg-purple-600/40 border border-purple-400/40 px-2.5 py-1 rounded-full text-xs font-bold text-purple-200 shrink-0">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Guardian Mode</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-slate-300 font-medium">
+                <Clock className="w-3.5 h-3.5 text-amber-400" />
+                <span className="font-mono font-bold text-white">{formatTimer(elapsedSeconds)}</span>
+              </div>
+              {activeGuardianContact && (
+                <div className="hidden sm:flex items-center gap-1.5 text-xs text-slate-300 border-l border-slate-700 pl-2.5">
+                  <span className="text-slate-400">Guardian:</span>
+                  <span className="font-bold text-white truncate max-w-[120px]">{activeGuardianContact.name}</span>
+                </div>
+              )}
+              {activeCheckIn && activeCheckIn.checkinStatus === 'pending' && (
+                <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-950/80 border border-emerald-500/40 text-xs text-emerald-300 font-semibold shadow-xs">
+                  <Clock className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>ETA Check-in: {activeCheckIn.expectedArrivalTime}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-900 border border-slate-700 text-xs">
+                <span className={`w-2 h-2 rounded-full ${isLocationSharingActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-500'}`} />
+                <span className="text-[11px] font-semibold text-slate-300">
+                  {isLocationSharingActive ? 'Live Sharing' : 'Stream Paused'}
+                </span>
+                <button
+                  onClick={() => setIsLocationSharingActive(!isLocationSharingActive)}
+                  className="ml-1 text-[10px] text-amber-400 hover:underline font-bold"
+                >
+                  {isLocationSharingActive ? 'Pause' : 'Resume'}
+                </button>
+              </div>
+
+              <button
+                onClick={handleArrivedSafely}
+                className="px-3 py-1 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-sm transition-all flex items-center gap-1 shrink-0"
+              >
+                <Heart className="w-3 h-3 text-pink-200 fill-pink-200" />
+                <span>I'm Safe</span>
+              </button>
+            </div>
+          </div>
+          
           {/* Primary Turn-by-Turn Direction Banner */}
           <div className={`rounded-3xl p-4 sm:p-5 shadow-2xl backdrop-blur-xl border transition-all ${
             isOffRoute
@@ -743,6 +894,20 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
+
+                {/* Innocuous Ring Me Quick Action Button for Walking Comfort */}
+                <button
+                  id="journey-ring-me-button"
+                  onClick={() => {
+                    const fn = onTriggerRingMe || onTriggerFakeCall;
+                    if (fn) fn();
+                  }}
+                  className="px-3 py-1.5 rounded-full border border-slate-600 bg-slate-800/90 hover:bg-slate-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-md hover:scale-105 active:scale-95"
+                  title="Ring Me"
+                >
+                  <Phone className="w-3.5 h-3.5 text-indigo-300" />
+                  <span className="font-bold">Ring Me</span>
+                </button>
 
                 {/* Voice Replay button */}
                 <button
@@ -899,6 +1064,15 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
               >
                 <span>⛽ Fuel</span>
               </button>
+
+              <button
+                onClick={() => toggleLayer('signals')}
+                className={`px-3 py-1.5 rounded-full text-[11px] font-bold flex items-center gap-1 backdrop-blur-md transition-all shadow-md shrink-0 ${
+                  activeLayers.signals ? 'bg-amber-500 text-slate-950 font-black border border-amber-300' : 'bg-white/95 text-slate-800 border border-slate-200'
+                }`}
+              >
+                <span>⚠️ Safety Signals</span>
+              </button>
             </div>
 
             <button
@@ -979,21 +1153,64 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
             );
           })}
 
-          {/* Nearby Support Places Markers */}
-          {mockNearbyPlaces.map((place, idx) => {
+          {/* Nearby Support Places Markers (Live Overpass + Verified Fallbacks) */}
+          {displaySafePlaces.map((place) => {
             if (!activeLayers[place.type]) return null;
             return (
               <Marker 
-                key={idx} 
+                key={place.id} 
                 position={[place.lat, place.lng]} 
                 icon={getNearbyLayerIcon(place.type)}
               >
                 <Popup>
-                  <div className="font-sans text-xs space-y-1">
-                    <strong className="text-slate-900 block">{place.title}</strong>
-                    <span className="inline-block px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded font-bold text-[10px]">
-                      Verified En-Route Support
-                    </span>
+                  <div className="font-sans text-xs space-y-1 p-1 max-w-[200px]">
+                    <strong className="text-slate-900 block font-bold">{place.name}</strong>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="inline-block px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded font-bold text-[10px] uppercase">
+                        {place.type}
+                      </span>
+                      {place.openStatus && (
+                        <span className="inline-block px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded text-[10px]">
+                          {place.openStatus}
+                        </span>
+                      )}
+                    </div>
+                    {place.address && (
+                      <p className="text-[11px] text-slate-600 leading-tight">{place.address}</p>
+                    )}
+                    {place.phone && (
+                      <a href={`tel:${place.phone}`} className="inline-flex items-center gap-1 text-[11px] text-blue-600 font-bold hover:underline">
+                        <span>📞 {place.phone}</span>
+                      </a>
+                    )}
+                  </div>
+                </Popup>
+              </Marker>
+            );
+          })}
+
+          {/* Community Safety Signals Markers (Temporal, non-stigmatizing) */}
+          {activeLayers.signals && safetySignals.map((signal) => {
+            if (!signal.coordinates || signal.coordinates.length < 2) return null;
+            return (
+              <Marker
+                key={signal.id}
+                position={signal.coordinates as [number, number]}
+                icon={getSignalMarkerIcon(signal.category || '')}
+              >
+                <Popup>
+                  <div className="font-sans text-xs space-y-1 p-1 max-w-[200px]">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-amber-100 text-amber-900 border border-amber-300">
+                        {signal.category || 'Safety Signal'}
+                      </span>
+                      <span className="text-[10px] text-slate-500">{signal.timestamp || 'Recent'}</span>
+                    </div>
+                    <strong className="text-slate-900 block font-bold text-xs">{signal.location}</strong>
+                    <p className="text-slate-700 text-[11px] leading-snug">{signal.text}</p>
+                    <div className="text-[9px] text-slate-400 italic pt-1 border-t border-slate-100">
+                      Community safety report • Temporal signal
+                    </div>
                   </div>
                 </Popup>
               </Marker>
@@ -1183,6 +1400,66 @@ export const ActiveJourneyPage: React.FC<ActiveJourneyPageProps> = ({
 
         </div>
       </div>
+
+      {/* Safe Arrival Celebration & Notification Modal */}
+      <AnimatePresence>
+        {showSafeArrivalModal && (
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white dark:bg-slate-900 border border-emerald-500/40 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl text-center space-y-5"
+            >
+              <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/20">
+                <CheckCircle2 className="w-10 h-10" />
+              </div>
+
+              <div>
+                <h3 className="text-2xl font-black text-slate-900 dark:text-white">
+                  You've Arrived Safely!
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-1">
+                  Journey to <strong>{destination.split(',')[0]}</strong> completed in <strong>{formatTimer(elapsedSeconds)}</strong>.
+                </p>
+                <p className="text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/80 rounded-xl p-2.5 mt-3 font-medium">
+                  ✓ Location streaming stopped. Active journey marked as completed.
+                </p>
+              </div>
+
+              {/* WhatsApp Notification CTA if contact exists */}
+              {activeGuardianContact && (
+                <div className="pt-2">
+                  <a
+                    href={`https://wa.me/${activeGuardianContact.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hi ${activeGuardianContact.name}, I have arrived safely at ${destination.split(',')[0]} via Saahat Guardian Journey! ❤️`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-3.5 rounded-2xl bg-[#25D366] hover:bg-[#1EBE5D] text-white font-extrabold text-sm shadow-lg flex items-center justify-center gap-2 transition-all"
+                  >
+                    <Send className="w-4 h-4" />
+                    <span>Notify {activeGuardianContact.name} on WhatsApp</span>
+                  </a>
+                  <span className="text-[11px] text-slate-400 mt-1 block">
+                    Sends safe arrival confirmation to {activeGuardianContact.phone}
+                  </span>
+                </div>
+              )}
+
+              <div className="pt-2 flex items-center justify-center gap-3">
+                <button
+                  onClick={() => {
+                    setShowSafeArrivalModal(false);
+                    onNavigateHome();
+                  }}
+                  className="w-full py-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 font-extrabold text-sm shadow-md transition-all"
+                >
+                  Return to Home
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PageType, TimeOfDay, UserProfile, RouteOption, CommunityNote, TravelMode } from './types';
+import { PageType, TimeOfDay, UserProfile, RouteOption, CommunityNote, TravelMode, TrustedContact } from './types';
 import { INITIAL_USER_PROFILE, MOCK_ROUTES, INITIAL_COMMUNITY_NOTES, TRUSTED_CONTACTS } from './data/mockData';
 import { Navbar } from './components/Navbar';
 import { HomePage } from './components/HomePage';
@@ -12,6 +12,10 @@ import { AboutPrivacyPage } from './components/AboutPrivacyPage';
 import { LowSignalPage } from './components/LowSignalPage';
 import { ActiveJourneyPage } from './components/ActiveJourneyPage';
 import { SOSModal } from './components/SOSModal';
+import { RingMeModal, FakeCallModal } from './components/RingMeModal';
+import { ringtoneAudio } from './utils/ringtoneAudio';
+import { ActiveCheckInModal } from './components/ActiveCheckInModal';
+import { DemoSimulatorPanel } from './components/DemoSimulatorPanel';
 import { SaahatAssistant } from './components/SaahatAssistant';
 import { User, X, Camera, CheckCircle2, Plus, Trash2, MapPin, LogOut } from 'lucide-react';
 import { generateRealRoutes, recalculateRouteScoresForTime, getLiveTimeOfDay } from './services/routing';
@@ -46,6 +50,13 @@ export function App() {
   const [newLocAddress, setNewLocAddress] = useState('');
   const [isLowSignalGlobal, setIsLowSignalGlobal] = useState(false);
   const [isSOSOpenDirectly, setIsSOSOpenDirectly] = useState(false);
+  const [isRingMeOpen, setIsRingMeOpen] = useState(false);
+
+  // Directly trigger Ring Me audio and modal on user action to satisfy autoplay policies
+  const handleTriggerRingMe = () => {
+    ringtoneAudio.start();
+    setIsRingMeOpen(true);
+  };
 
   // Authentication State
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -63,6 +74,7 @@ export function App() {
   const [routes, setRoutes] = useState<RouteOption[]>(MOCK_ROUTES.default);
   const [selectedRouteId, setSelectedRouteId] = useState<string>("route-best");
   const [isJourneyStarted, setIsJourneyStarted] = useState<boolean>(false);
+  const [activeJourneyContacts, setActiveJourneyContacts] = useState<TrustedContact[]>([]);
 
   // Community Notes Feed State
   const [communityNotes, setCommunityNotes] = useState<CommunityNote[]>(INITIAL_COMMUNITY_NOTES);
@@ -200,13 +212,17 @@ export function App() {
     changePage('journey');
   };
 
-  const handleStartJourneyFromShare = () => {
+  const handleStartJourneyFromShare = (contact?: TrustedContact) => {
+    if (contact) {
+      setActiveJourneyContacts([contact]);
+    }
     setIsJourneyStarted(true);
     changePage('journey');
   };
 
   const handleEndJourney = () => {
     setIsJourneyStarted(false);
+    setActiveJourneyContacts([]);
     setOrigin("");
     setDestination("");
     changePage('home');
@@ -214,6 +230,7 @@ export function App() {
 
   const handleNavigateHome = () => {
     setIsJourneyStarted(false);
+    setActiveJourneyContacts([]);
     setOrigin("");
     setDestination("");
     changePage('home');
@@ -291,6 +308,8 @@ export function App() {
         onTriggerSOS={() => setIsSOSOpenDirectly(true)}
         isLowSignalGlobal={isLowSignalGlobal}
         setIsLowSignalGlobal={setIsLowSignalGlobal}
+        onTriggerRingMe={handleTriggerRingMe}
+        onTriggerFakeCall={handleTriggerRingMe}
       />
 
       {/* Main Viewport Router with Framer Motion Page Transitions */}
@@ -312,6 +331,8 @@ export function App() {
                 isLowSignalGlobal={isLowSignalGlobal}
                 timeOfDay={timeOfDay}
                 setTimeOfDay={setTimeOfDay}
+                onTriggerRingMe={handleTriggerRingMe}
+                onTriggerFakeCall={handleTriggerRingMe}
               />
             )}
 
@@ -369,6 +390,9 @@ export function App() {
                 onNavigateHome={handleNavigateHome}
                 isLowSignalGlobal={isLowSignalGlobal}
                 timeOfDay={timeOfDay}
+                trustedContacts={activeJourneyContacts}
+                onTriggerRingMe={handleTriggerRingMe}
+                onTriggerFakeCall={handleTriggerRingMe}
               />
             )}
 
@@ -386,6 +410,11 @@ export function App() {
                 onNavigateSearch={() => changePage('search')}
                 onBack={handleGoBack}
                 isLowSignalGlobal={isLowSignalGlobal}
+                isJourneyActive={isJourneyStarted}
+                activeContacts={activeJourneyContacts}
+                onStopLocationSharing={() => {
+                  setActiveJourneyContacts([]);
+                }}
               />
             )}
 
@@ -407,10 +436,19 @@ export function App() {
 
       {/* Persistent SOS Floating Action Button & Modal */}
       <SOSModal 
-        trustedContact={TRUSTED_CONTACTS[0]} 
+        trustedContact={activeJourneyContacts[0] || TRUSTED_CONTACTS[0]} 
         isOpenDirectly={isSOSOpenDirectly}
         onCloseDirectly={() => setIsSOSOpenDirectly(false)}
+        activeJourneyInfo={isJourneyStarted ? {
+          origin: origin || 'Current Location',
+          destination: destination || 'Designated Destination',
+          routeName: selectedRoute?.name || 'Saahat Guardian Route',
+          eta: selectedRoute ? `${selectedRoute.durationMinutes} mins` : undefined
+        } : null}
+        onTriggerRingMe={handleTriggerRingMe}
+        onTriggerFakeCall={handleTriggerRingMe}
       />
+
 
       {/* Persistent Saarthi Chatbot (Bottom-Left Corner) */}
       <SaahatAssistant
@@ -421,6 +459,31 @@ export function App() {
         timeOfDay={timeOfDay}
         isLowSignalGlobal={isLowSignalGlobal}
         userProfile={userProfile}
+        onTriggerSOS={() => setIsSOSOpenDirectly(true)}
+        onTriggerRingMe={handleTriggerRingMe}
+        onTriggerFakeCall={handleTriggerRingMe}
+      />
+
+      {/* Realistic Simulated Ring Me Overlay Modal */}
+      <RingMeModal
+        isOpen={isRingMeOpen}
+        onClose={() => {
+          ringtoneAudio.stop();
+          setIsRingMeOpen(false);
+        }}
+        initialCallerName="Mom"
+      />
+
+      {/* Active Check-In & Countdown Alert Modal with 3-Option Response */}
+      <ActiveCheckInModal
+        userName={userProfile.name}
+        onTriggerSOS={() => setIsSOSOpenDirectly(true)}
+        isLowSignalGlobal={isLowSignalGlobal}
+      />
+
+      {/* Discreet Demo Simulator for Judges & Testing */}
+      <DemoSimulatorPanel
+        userName={userProfile.name}
         onTriggerSOS={() => setIsSOSOpenDirectly(true)}
       />
 

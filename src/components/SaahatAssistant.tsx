@@ -27,6 +27,8 @@ interface SaahatAssistantProps {
   isLowSignalGlobal: boolean;
   userProfile?: UserProfile | null;
   onTriggerSOS: () => void;
+  onTriggerRingMe?: () => void;
+  onTriggerFakeCall?: () => void;
 }
 
 export const SaahatAssistant: React.FC<SaahatAssistantProps> = ({
@@ -37,7 +39,9 @@ export const SaahatAssistant: React.FC<SaahatAssistantProps> = ({
   timeOfDay,
   isLowSignalGlobal,
   userProfile,
-  onTriggerSOS
+  onTriggerSOS,
+  onTriggerRingMe,
+  onTriggerFakeCall
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const getInitialWelcomeMessage = (): AssistantMessage => ({
@@ -341,6 +345,10 @@ export const SaahatAssistant: React.FC<SaahatAssistantProps> = ({
                           onClick={() => {
                             if (reply === "Open SOS Emergency" || reply === "Show SOS console") {
                               handleEmergencySOSClick();
+                            } else if (reply === "Ring Me" || reply === "Launch Fake Call") {
+                              const fn = onTriggerRingMe || onTriggerFakeCall;
+                              if (fn) fn();
+                              setIsOpen(false);
                             } else {
                               handleSendMessage(reply);
                             }

@@ -411,3 +411,73 @@ export async function markJourneyComplete(journeyId?: string | null): Promise<bo
     return false;
   }
 }
+
+export async function stopAllActiveJourneys(): Promise<boolean> {
+  if (!isSupabaseConfigured || !supabase) return true;
+  try {
+    const user = await getCurrentUser();
+    if (!user) return true;
+
+    const { error } = await supabase
+      .from('journeys')
+      .update({
+        is_active: false,
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', user.id)
+      .eq('is_active', true);
+
+    return !error;
+  } catch (err) {
+    console.warn('Supabase stopAllActiveJourneys error:', err);
+    return false;
+  }
+}
+
+export async function deleteUserJourneyHistory(): Promise<boolean> {
+  if (!isSupabaseConfigured || !supabase) return true;
+  try {
+    const user = await getCurrentUser();
+    if (!user) return true;
+
+    const { error } = await supabase
+      .from('journeys')
+      .delete()
+      .eq('user_id', user.id);
+
+    return !error;
+  } catch (err) {
+    console.warn('Supabase deleteUserJourneyHistory error:', err);
+    return false;
+  }
+}
+
+export async function fetchRecentSafetySignals(): Promise<CommunityNote[]> {
+  if (!isSupabaseConfigured || !supabase) {
+    return [];
+  }
+  try {
+    const { data, error } = await supabase
+      .from('community_notes')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(30);
+
+    if (error || !data) return [];
+    return data.map((n) => ({
+      id: n.id,
+      author: n.author_name || 'Community Member',
+      category: n.category || 'General',
+      location: n.location || 'Reported Location',
+      text: n.text || '',
+      timestamp: n.timestamp_text || 'Recent',
+      photoUrl: n.photo_url || undefined,
+      upvotes: n.upvotes || 0,
+      verified: Boolean(n.verified),
+    }));
+  } catch (err) {
+    console.warn('Supabase fetchRecentSafetySignals fallback:', err);
+    return [];
+  }
+}
+

@@ -270,6 +270,22 @@ function getLocalAssistantResponse(
     };
   }
 
+  // Feature: Ring Me Simulation (Discreet Comfort Call)
+  if (
+    q.includes("ring me") ||
+    q.includes("fake call") ||
+    q.includes("fake phone call") ||
+    q.includes("call mom") ||
+    q.includes("discreet call") ||
+    q.includes("pretend call") ||
+    q.includes("simulate call")
+  ) {
+    return {
+      text: "The 'Ring Me' feature provides an innocuous simulated incoming phone call from 'Mom'. It is designed as a discreet comfort tool for situations where you need an excuse to step away from an awkward conversation or feel less alone in public. It features a loud realistic smartphone ringtone with vibration, a smartphone incoming screen, a running call timer, an animated audio waveform, and natural conversation cues. It is 100% simulated and does not dial real numbers or contact anyone.",
+      quickReplies: ["Ring Me", "How does SOS work?", "What does Low Signal Mode do?"]
+    };
+  }
+
   // Feature: SOS Emergency Console
   if (
     q.includes("sos") || 

@@ -63,16 +63,40 @@ export interface TrustedContact {
   avatarBg: string;
 }
 
+export type SafetySignalCategory = 
+  | 'Poor lighting' 
+  | 'Isolated area' 
+  | 'Road obstruction' 
+  | 'Heavy crowd' 
+  | 'Other safety concerns'
+  | 'Streetlights' 
+  | 'Footfall' 
+  | 'Transit & Stations' 
+  | 'General';
+
 export interface CommunityNote {
   id: string;
   author: string;
-  category: 'Streetlights' | 'Footfall' | 'Transit & Stations' | 'General';
+  category: SafetySignalCategory | string;
   location: string;
   text: string;
   timestamp: string;
   photoUrl?: string;
   upvotes: number;
   verified: boolean;
+  coordinates?: [number, number];
+}
+
+export interface SafePlace {
+  id: string;
+  name: string;
+  type: 'police' | 'hospital' | 'pharmacy' | 'metro' | 'public_place';
+  lat: number;
+  lng: number;
+  address?: string;
+  distanceKm?: number;
+  openStatus?: string;
+  phone?: string;
 }
 
 export interface UserProfile {
@@ -89,4 +113,50 @@ export interface OfflineHelpPoint {
   address: string;
   phone: string;
   open247: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Active Check-In & ETA Extension Types
+// ---------------------------------------------------------------------------
+
+export type CheckInStatus = 
+  | 'pending'
+  | 'safe_delayed'
+  | 'safe_low_signal'
+  | 'help_requested'
+  | 'no_response'
+  | 'arrived_safely';
+
+export type CheckInChannel = 'whatsapp' | 'sms';
+
+export interface CheckInStatusEvent {
+  status: CheckInStatus;
+  timestamp: number;
+  timestampFormatted: string;
+  channel?: CheckInChannel;
+  note?: string;
+}
+
+export interface ActiveCheckInJourney {
+  id: string;
+  recipientName: string;
+  recipientPhone: string;
+  routeName: string;
+  durationMinutes: number;
+  expectedArrivalTime: string;
+  targetTimestamp: number;
+  customArrivalMessage?: string;
+  customMessageReleased: boolean;
+  checkinStatus: CheckInStatus;
+  newCheckinTime?: string;
+  channelUsed: CheckInChannel;
+  statusHistory: CheckInStatusEvent[];
+  escalationTier: number; // 0: None, 1: Nudge, 2: SMS Fallback, 3: Emergency Escalation
+  lastKnownLocation?: {
+    lat: number;
+    lng: number;
+    mapsLink: string;
+    text: string;
+  };
+  backstopTimestamp?: number;
 }

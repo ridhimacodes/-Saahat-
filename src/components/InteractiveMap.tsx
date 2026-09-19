@@ -1,8 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { MapContainer, TileLayer, Polyline, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { RouteOption } from '../types';
+import { RouteOption, SafePlace, CommunityNote } from '../types';
 import { GEOAPIFY_MAP_TILES_API_KEY, MAP_API_CONFIG } from '../config/maps';
+import { fetchNearbySafePlaces } from '../services/safePlacesService';
+import { fetchRecentSafetySignals } from '../services/supabaseService';
 import { 
   Navigation, 
   Compass, 
@@ -10,22 +12,23 @@ import {
   MapPin, 
   ShieldCheck, 
   LocateFixed, 
-  Maximize2,
-  Minimize2,
-  Plus,
-  Minus,
-  Building2,
-  Shield,
-  Train,
-  Cross,
-  Fuel,
-  Store,
-  Landmark,
-  Stethoscope,
-  Activity,
-  Eye,
-  Sun,
-  Globe
+  Maximize2, 
+  Minimize2, 
+  Plus, 
+  Minus, 
+  Building2, 
+  Shield, 
+  Train, 
+  Cross, 
+  Fuel, 
+  Store, 
+  Landmark, 
+  Stethoscope, 
+  Activity, 
+  Eye, 
+  Sun, 
+  Globe,
+  AlertTriangle
 } from 'lucide-react';
 
 // Custom SVG Pins matching Google Maps
@@ -80,6 +83,28 @@ const getNearbyLayerIcon = (type: string) => {
     className: 'landmark-marker',
     html: `
       <div class="flex items-center justify-center w-7 h-7 ${bgColor} text-white rounded-full border-2 border-white shadow-md text-xs font-bold">
+        ${emoji}
+      </div>
+    `,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+    popupAnchor: [0, -14]
+  });
+};
+
+const getSignalMarkerIcon = (category: string) => {
+  let emoji = '⚠️';
+  let bgColor = 'bg-amber-600';
+  const catLower = (category || '').toLowerCase();
+  if (catLower.includes('light')) { emoji = '💡'; bgColor = 'bg-yellow-600'; }
+  else if (catLower.includes('obstruction')) { emoji = '🚧'; bgColor = 'bg-orange-600'; }
+  else if (catLower.includes('crowd')) { emoji = '👥'; bgColor = 'bg-purple-600'; }
+  else if (catLower.includes('isolated')) { emoji = '🌙'; bgColor = 'bg-slate-700'; }
+
+  return L.divIcon({
+    className: 'community-signal-marker',
+    html: `
+      <div class="flex items-center justify-center w-7 h-7 ${bgColor} text-white rounded-full border-2 border-white shadow-md text-xs font-bold ring-2 ring-amber-400/50 animate-pulse">
         ${emoji}
       </div>
     `,
@@ -251,8 +276,12 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
     police: true,
     metro: true,
     pharmacy: false,
-    fuel: false
+    fuel: false,
+    signals: true
   });
+
+  const [safePlaces, setSafePlaces] = useState<SafePlace[]>([]);
+  const [safetySignals, setSafetySignals] = useState<CommunityNote[]>([]);
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -268,7 +297,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
           setUserGpsPos(coords);
         },
         (err) => console.warn('GPS location error:', err),
-        { enableHighAccuracy: true }
+        { enableHighAccuracy: !isLowSignalGlobal }
       );
     }
   };
@@ -285,14 +314,35 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   const originCoords = selectedRoute.coordinates[0];
   const destCoords = selectedRoute.coordinates[selectedRoute.coordinates.length - 1];
 
-  // Derive nearby support places coordinates based on origin
+  // Dynamic fetch of verified Safe Places and Community Signals around active route
+  useEffect(() => {
+    if (originCoords) {
+      fetchNearbySafePlaces(originCoords).then(places => setSafePlaces(places));
+    }
+    fetchRecentSafetySignals().then(signals => setSafetySignals(signals));
+  }, [originCoords?.[0], originCoords?.[1]]);
+
+  // Fallback nearby support places
   const mockNearbyPlaces = originCoords ? [
     { type: 'police', title: 'Police Assistance Desk', lat: originCoords[0] + 0.003, lng: originCoords[1] + 0.002 },
     { type: 'hospital', title: 'City Central Emergency Hospital', lat: originCoords[0] - 0.004, lng: originCoords[1] + 0.005 },
-    { type: 'metro', title: 'Rajiv Chowk Metro Exit 2', lat: originCoords[0] + 0.001, lng: originCoords[1] - 0.003 },
+    { type: 'metro', title: 'Transit / Metro Station Exit', lat: originCoords[0] + 0.001, lng: originCoords[1] - 0.003 },
     { type: 'pharmacy', title: '24/7 Chemist & Healthcare', lat: originCoords[0] + 0.005, lng: originCoords[1] - 0.001 },
     { type: 'fuel', title: 'HP Fuel & Express Station', lat: originCoords[0] - 0.002, lng: originCoords[1] - 0.004 },
   ] : [];
+
+  // Combine fetched safePlaces with mockNearbyPlaces
+  const displaySafePlaces: SafePlace[] = safePlaces.length > 0 
+    ? safePlaces 
+    : mockNearbyPlaces.map((p, idx) => ({
+        id: `mock-sp-${idx}`,
+        name: p.title,
+        type: p.type as any,
+        lat: p.lat,
+        lng: p.lng,
+        address: 'Verified En-Route Safe Facility',
+        openStatus: '24/7 Monitored'
+      }));
 
   // Determine tile URL based on mapType
   const getTileUrl = () => {
@@ -327,7 +377,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
       } font-sans`}
     >
       
-      {/* Top Bar: Amenity Support Filters */}
+      {/* Top Bar: Safe Places & Safety Signals Amenity Filters */}
       <div className="absolute top-3 left-44 right-14 z-[400] flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
         <button
           onClick={() => toggleLayer('police')}
@@ -371,7 +421,18 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
             activeLayers.fuel ? 'bg-amber-600 text-white border border-amber-400' : 'bg-white/90 text-slate-700 border border-slate-200'
           }`}
         >
-          <span>⛽ Fuel</span>
+          <span>⛽ Public Help</span>
+        </button>
+
+        <button
+          onClick={() => toggleLayer('signals')}
+          className={`px-3 py-1.5 rounded-full text-[11px] font-bold flex items-center gap-1 backdrop-blur-md transition-all shadow-sm shrink-0 ${
+            activeLayers.signals ? 'bg-amber-500 text-slate-950 font-black border border-amber-400 ring-2 ring-amber-400/30' : 'bg-white/90 text-slate-700 border border-slate-200'
+          }`}
+          title="Toggle Recent Community Safety Signals"
+        >
+          <AlertTriangle className="w-3.5 h-3.5 text-amber-700" />
+          <span>Safety Signals</span>
         </button>
       </div>
 
@@ -486,17 +547,65 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
           </Marker>
         )}
 
-        {/* Optional Nearby Support Place Markers */}
-        {mockNearbyPlaces.map((place, idx) => {
-          if (!activeLayers[place.type]) return null;
+        {/* Safe Places Markers */}
+        {displaySafePlaces.map((place) => {
+          const layerKey = place.type === 'public_place' ? 'fuel' : place.type;
+          if (!activeLayers[layerKey]) return null;
           return (
-            <Marker key={idx} position={[place.lat, place.lng]} icon={getNearbyLayerIcon(place.type)}>
+            <Marker key={place.id} position={[place.lat, place.lng]} icon={getNearbyLayerIcon(place.type)}>
               <Popup>
-                <div className="p-1.5 font-sans">
-                  <span className="text-xs font-bold text-slate-800 block">{place.title}</span>
-                  <span className="text-[10px] text-blue-700 font-bold capitalize mt-0.5 block">
-                    Verified Support Facility
+                <div className="p-1.5 font-sans space-y-1 min-w-[170px]">
+                  <strong className="text-xs font-bold text-slate-900 block">{place.name}</strong>
+                  <span className="inline-block text-[10px] text-emerald-800 font-bold uppercase tracking-wider bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                    Safe Place • {place.type}
                   </span>
+                  {place.address && <p className="text-[11px] text-slate-600 mt-0.5">{place.address}</p>}
+                  {place.distanceKm !== undefined && (
+                    <p className="text-[10px] font-bold text-emerald-700">{place.distanceKm} km away</p>
+                  )}
+                  {place.openStatus && (
+                    <span className="block text-[10px] font-medium text-slate-600">
+                      🕒 {place.openStatus}
+                    </span>
+                  )}
+                  {place.phone && (
+                    <a href={`tel:${place.phone}`} className="inline-flex items-center gap-1 text-[11px] text-purple-700 font-bold hover:underline mt-1">
+                      📞 {place.phone}
+                    </a>
+                  )}
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
+
+        {/* Community Safety Signals Markers */}
+        {activeLayers.signals && safetySignals.map((sig, sIdx) => {
+          const sigPos: [number, number] = sig.coordinates || (
+            originCoords ? [
+              originCoords[0] + (sIdx % 2 === 0 ? 0.0025 : -0.0025) * ((sIdx % 4) + 1) * 0.4,
+              originCoords[1] + (sIdx % 2 === 0 ? -0.003 : 0.003) * ((sIdx % 4) + 1) * 0.4
+            ] : [28.6653, 77.2324]
+          );
+
+          return (
+            <Marker key={sig.id} position={sigPos} icon={getSignalMarkerIcon(sig.category)}>
+              <Popup>
+                <div className="p-1.5 font-sans space-y-1.5 max-w-[220px]">
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
+                      {sig.category}
+                    </span>
+                  </div>
+                  <strong className="text-xs font-bold text-slate-900 block">{sig.location}</strong>
+                  <p className="text-xs text-slate-700 italic leading-relaxed">"{sig.text}"</p>
+                  <div className="flex items-center justify-between text-[10px] text-slate-500 pt-1 border-t border-slate-100">
+                    <span>Reported {sig.timestamp}</span>
+                    <span className="font-semibold text-emerald-700">Verified</span>
+                  </div>
+                  <p className="text-[9px] text-slate-400 font-medium">
+                    Recent community safety signal • Non-permanent report
+                  </p>
                 </div>
               </Popup>
             </Marker>

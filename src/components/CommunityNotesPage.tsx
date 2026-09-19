@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, Plus, ThumbsUp, Camera, CheckCircle2, Image as ImageIcon, MapPin, Tag, Sparkles, Filter, X, ArrowLeft } from 'lucide-react';
+import { MessageSquare, Plus, ThumbsUp, Camera, CheckCircle2, Image as ImageIcon, MapPin, Tag, Sparkles, Filter, X, ArrowLeft, LocateFixed } from 'lucide-react';
 import { CommunityNote } from '../types';
 
 interface CommunityNotesPageProps {
@@ -23,12 +23,23 @@ export const CommunityNotesPage: React.FC<CommunityNotesPageProps> = ({
   // Form states
   const [category, setCategory] = useState<CommunityNote['category']>("Streetlights");
   const [location, setLocation] = useState("");
+  const [noteCoords, setNoteCoords] = useState<[number, number] | undefined>(undefined);
+  const [isDetectingLocation, setIsDetectingLocation] = useState(false);
   const [text, setText] = useState("");
   const [photoUrl, setPhotoUrl] = useState<string | undefined>(undefined);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const categories = ["All", "Streetlights", "Footfall", "Transit & Stations", "General"];
+  const categories = [
+    "All", 
+    "Streetlights", 
+    "Isolated area", 
+    "Road obstruction", 
+    "Heavy crowd", 
+    "Transit & Stations", 
+    "Footfall", 
+    "Other safety concerns"
+  ];
 
   const filteredNotes = activeCategory === "All"
     ? notes
@@ -54,20 +65,54 @@ export const CommunityNotesPage: React.FC<CommunityNotesPageProps> = ({
     }
   };
 
+  const handleUseCurrentLocation = () => {
+    if (!('geolocation' in navigator)) return;
+    setIsDetectingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const coords: [number, number] = [pos.coords.latitude, pos.coords.longitude];
+        setNoteCoords(coords);
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords[0]}&lon=${coords[1]}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.display_name) {
+              const parts = data.display_name.split(',');
+              setLocation(`${parts[0]}, ${parts[1] || ''}`.trim());
+            } else {
+              setLocation(`Near ${coords[0].toFixed(4)}, ${coords[1].toFixed(4)}`);
+            }
+          } else {
+            setLocation(`Near ${coords[0].toFixed(4)}, ${coords[1].toFixed(4)}`);
+          }
+        } catch {
+          setLocation(`Near ${coords[0].toFixed(4)}, ${coords[1].toFixed(4)}`);
+        }
+        setIsDetectingLocation(false);
+      },
+      (err) => {
+        console.warn("GPS detection error:", err);
+        setIsDetectingLocation(false);
+      },
+      { timeout: 8000 }
+    );
+  };
+
   const handleSubmitNote = (e: React.FormEvent) => {
     e.preventDefault();
     if (!location.trim() || !text.trim()) return;
 
     const newNoteObj: CommunityNote = {
       id: `note-${Date.now()}`,
-      author: 'Anonymous Neighbor',
+      author: 'Anonymous Community Contributor',
       category,
       location,
       text,
       timestamp: 'Just now',
       photoUrl,
       upvotes: 1,
-      verified: true
+      verified: true,
+      coordinates: noteCoords || [28.6653, 77.2324]
     };
 
     onAddNote(newNoteObj);
@@ -76,6 +121,7 @@ export const CommunityNotesPage: React.FC<CommunityNotesPageProps> = ({
     // Reset Form
     setLocation("");
     setText("");
+    setNoteCoords(undefined);
     setPhotoUrl(undefined);
   };
 
@@ -255,16 +301,31 @@ export const CommunityNotesPage: React.FC<CommunityNotesPageProps> = ({
                     className="w-full p-3 rounded-2xl border border-slate-200 text-sm font-semibold text-slate-800 bg-slate-50"
                   >
                     <option value="Streetlights">Streetlights & Lighting</option>
+                    <option value="Isolated area">Isolated Area</option>
+                    <option value="Road obstruction">Road Obstruction</option>
+                    <option value="Heavy crowd">Heavy Crowd</option>
                     <option value="Footfall">Pedestrian & Footfall</option>
                     <option value="Transit & Stations">Transit & Bus Stops</option>
+                    <option value="Other safety concerns">Other Safety Concerns</option>
                     <option value="General">General Infrastructure</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                    Location / Intersection
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+                      Location / Intersection
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleUseCurrentLocation}
+                      disabled={isDetectingLocation}
+                      className="text-xs font-bold text-brand-purple hover:underline flex items-center gap-1"
+                    >
+                      <LocateFixed className={`w-3.5 h-3.5 ${isDetectingLocation ? 'animate-spin text-amber-500' : ''}`} />
+                      <span>{isDetectingLocation ? 'Locating...' : 'Use Current GPS'}</span>
+                    </button>
+                  </div>
                   <input
                     type="text"
                     placeholder="e.g. 4th Cross Street near Metro Gate 2"
@@ -273,6 +334,11 @@ export const CommunityNotesPage: React.FC<CommunityNotesPageProps> = ({
                     required
                     className="w-full p-3 rounded-2xl border border-slate-200 text-sm font-medium text-slate-800"
                   />
+                  {noteCoords && (
+                    <span className="text-[10px] text-emerald-600 font-bold mt-1 block">
+                      ✓ GPS coordinates attached for live safety map ({noteCoords[0].toFixed(4)}, {noteCoords[1].toFixed(4)})
+                    </span>
+                  )}
                 </div>
 
                 <div>

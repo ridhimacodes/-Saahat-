@@ -1,5 +1,5 @@
 import React from 'react';
-import { Compass, Search, MessageSquare, ShieldCheck, Sun, Moon, Sunset, Sparkles, User as UserIcon, BatteryLow, AlertTriangle } from 'lucide-react';
+import { Compass, Search, MessageSquare, ShieldCheck, Sun, Moon, Sunset, Sparkles, User as UserIcon, BatteryLow, AlertTriangle, PhoneCall, Phone } from 'lucide-react';
 import { PageType, TimeOfDay, UserProfile } from '../types';
 
 interface NavbarProps {
@@ -12,6 +12,8 @@ interface NavbarProps {
   onTriggerSOS: () => void;
   isLowSignalGlobal: boolean;
   setIsLowSignalGlobal: (val: boolean) => void;
+  onTriggerRingMe?: () => void;
+  onTriggerFakeCall?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -23,7 +25,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenProfileModal,
   onTriggerSOS,
   isLowSignalGlobal,
-  setIsLowSignalGlobal
+  setIsLowSignalGlobal,
+  onTriggerRingMe,
+  onTriggerFakeCall
 }) => {
   return (
     <>
@@ -154,8 +158,26 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             </nav>
 
-            {/* Right Controls: Profile Avatar */}
-            <div className="flex items-center gap-2.5 sm:gap-3">
+            {/* Right Controls: Ring Me & Profile Avatar */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              {/* Innocuous Ring Me Quick Action Button */}
+              <button
+                id="navbar-ring-me-button"
+                onClick={() => {
+                  const fn = onTriggerRingMe || onTriggerFakeCall;
+                  if (fn) fn();
+                }}
+                className={`px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 hover:scale-105 active:scale-95 shadow-xs ${
+                  isLowSignalGlobal
+                    ? 'bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700'
+                    : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-xs'
+                }`}
+                title="Ring Me"
+              >
+                <Phone className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
+                <span className="text-[11px] sm:text-xs">Ring Me</span>
+              </button>
+
               {/* Profile Avatar Button */}
               <button
                 onClick={onOpenProfileModal}

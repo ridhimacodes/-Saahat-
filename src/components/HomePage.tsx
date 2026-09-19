@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Compass, ShieldCheck, HeartHandshake, ArrowRight, Camera, Upload, Lock, Sparkles, Clock, Calendar, Sun, Moon, Sunset, ChevronDown, EyeOff, Shield, FileCheck, ChevronRight } from 'lucide-react';
+import { Compass, ShieldCheck, HeartHandshake, ArrowRight, Camera, Upload, Lock, Sparkles, Clock, Calendar, Sun, Moon, Sunset, ChevronDown, EyeOff, Shield, FileCheck, ChevronRight, PhoneCall } from 'lucide-react';
 import { UserProfile, TimeOfDay } from '../types';
 import { PRESET_AVATARS } from '../data/mockData';
 
@@ -12,6 +12,8 @@ interface HomePageProps {
   isLowSignalGlobal: boolean;
   timeOfDay: TimeOfDay;
   setTimeOfDay: (time: TimeOfDay) => void;
+  onTriggerRingMe?: () => void;
+  onTriggerFakeCall?: () => void;
 }
 
 export const HomePage: React.FC<HomePageProps> = ({
@@ -21,7 +23,9 @@ export const HomePage: React.FC<HomePageProps> = ({
   setUserProfile,
   isLowSignalGlobal,
   timeOfDay,
-  setTimeOfDay
+  setTimeOfDay,
+  onTriggerRingMe,
+  onTriggerFakeCall
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -354,6 +358,68 @@ export const HomePage: React.FC<HomePageProps> = ({
           </motion.div>
 
         </div>
+
+        {/* Dedicated Quick Action: Ring Me Feature Spotlight */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: false, amount: 0.2 }}
+          transition={{ duration: 0.6, delay: 0.55 }}
+          className={`mt-8 p-6 sm:p-8 rounded-3xl border shadow-xl relative overflow-hidden transition-all ${
+            isLowSignalGlobal
+              ? 'bg-gradient-to-r from-slate-900 via-purple-950/40 to-slate-900 border-slate-700 text-white'
+              : 'bg-gradient-to-r from-purple-900 via-indigo-950 to-slate-900 border-purple-800/40 text-white'
+          }`}
+        >
+          <div className="absolute -right-12 -top-12 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="space-y-3 text-center md:text-left">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-xs font-black uppercase tracking-wider">
+                <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-spin-slow" />
+                <span>Quick Comfort Tool</span>
+              </div>
+
+              <h3 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+                Everyday Quick Action: <span className="bg-gradient-to-r from-indigo-300 via-purple-200 to-amber-200 bg-clip-text text-transparent">Ring Me</span>
+              </h3>
+
+              <p className="text-sm text-purple-200/90 max-w-xl leading-relaxed">
+                Need a believable excuse to step away from an awkward conversation or feel more connected when walking alone? Trigger an immediate simulated call from <strong>Mom</strong> with a realistic ringtone, smartphone interface, and natural conversation cues.
+              </p>
+
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 pt-1 text-[11px] text-slate-300">
+                <span className="px-2.5 py-1 rounded-lg bg-white/10 border border-white/10 font-semibold">📞 Caller: Mom</span>
+                <span className="px-2.5 py-1 rounded-lg bg-white/10 border border-white/10 font-semibold">💬 Conversation Prompts</span>
+                <span className="px-2.5 py-1 rounded-lg bg-white/10 border border-white/10 font-semibold">🔒 100% Simulated & Private</span>
+              </div>
+            </div>
+
+            {/* Launch Ring Me Button */}
+            <div className="flex-shrink-0">
+              <motion.button
+                id="home-trigger-ring-me"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => {
+                  const fn = onTriggerRingMe || onTriggerFakeCall;
+                  if (fn) fn();
+                }}
+                className="px-6 py-4 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-slate-800 hover:from-indigo-500 hover:to-purple-500 text-white font-extrabold text-base shadow-2xl shadow-indigo-600/40 hover:shadow-indigo-600/60 border-2 border-white/20 flex items-center gap-3 transition-all duration-300 group"
+                title="Ring Me"
+              >
+                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <PhoneCall className="w-5 h-5 text-indigo-200" />
+                </div>
+                <div className="text-left">
+                  <span className="block text-xs uppercase font-black tracking-wider text-indigo-200">Discreet Comfort</span>
+                  <span className="block text-base font-bold text-white">Ring Me</span>
+                </div>
+                <ArrowRight className="w-5 h-5 ml-1 group-hover:translate-x-1 transition-transform text-indigo-200" />
+              </motion.button>
+            </div>
+          </div>
+        </motion.div>
       </section>
 
       {/* Profile Picture Personalization Section */}

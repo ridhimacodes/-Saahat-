@@ -1,4 +1,4 @@
-﻿// --- SEARCH HISTORY ---
+// --- SEARCH HISTORY ---
 export interface SearchHistoryItem {
   id: string;
   origin: string;
@@ -70,6 +70,8 @@ export function removeSearchHistoryItem(id: string): SearchHistoryItem[] {
   }
 }
 
+import { CheckInStatus, CheckInChannel } from '../types';
+
 // --- SHARED ETA HISTORY ---
 export interface SharedETAHistoryItem {
   id: string;
@@ -81,6 +83,11 @@ export interface SharedETAHistoryItem {
   expectedArrivalTime: string;
   sharedAt: string;
   timestamp: number;
+  checkinStatus?: CheckInStatus;
+  customArrivalMessage?: string;
+  customMessageReleased?: boolean;
+  channelUsed?: CheckInChannel;
+  newCheckinTime?: string;
 }
 
 const SHARED_ETA_HISTORY_KEY = 'saahat_shared_eta_history';
@@ -133,3 +140,21 @@ export function removeSharedETAHistoryItem(id: string): SharedETAHistoryItem[] {
     return [];
   }
 }
+
+export function updateSharedETAHistoryItem(id: string, updates: Partial<SharedETAHistoryItem>): SharedETAHistoryItem[] {
+  try {
+    const existing = getSharedETAHistory();
+    const updated = existing.map(item => item.id === id ? { ...item, ...updates } : item);
+    localStorage.setItem(SHARED_ETA_HISTORY_KEY, JSON.stringify(updated));
+    return updated;
+  } catch (e) {
+    console.warn('Failed to update shared ETA item:', e);
+    return [];
+  }
+}
+
+export function clearAllHistory(): void {
+  clearSearchHistory();
+  clearSharedETAHistory();
+}
+

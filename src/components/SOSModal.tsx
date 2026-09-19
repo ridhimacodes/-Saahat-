@@ -2,41 +2,138 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, Phone, ShieldAlert, MapPin, Share2, CheckCircle2, X, Radio, Heart, PhoneCall } from 'lucide-react';
 import { TrustedContact } from '../types';
+import { fetchEmergencyContacts } from '../services/supabaseService';
 import confetti from 'canvas-confetti';
 
 interface SOSModalProps {
   trustedContact?: TrustedContact;
   isOpenDirectly?: boolean;
   onCloseDirectly?: () => void;
+  activeJourneyInfo?: {
+    origin?: string;
+    destination?: string;
+    routeName?: string;
+    eta?: string;
+  } | null;
+  onTriggerRingMe?: () => void;
+  onTriggerFakeCall?: () => void;
 }
 
 export const SOSModal: React.FC<SOSModalProps> = ({
-  trustedContact,
+  trustedContact: initialContact,
   isOpenDirectly,
-  onCloseDirectly
+  onCloseDirectly,
+  activeJourneyInfo,
+  onTriggerRingMe,
+  onTriggerFakeCall
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isCountdownActive, setIsCountdownActive] = useState(false);
+  const [countdown, setCountdown] = useState(5);
   const [isLocationSharingActive, setIsLocationSharingActive] = useState(true);
   const [isCallSimulated, setIsCallSimulated] = useState<string | null>(null);
   const [isResolved, setIsResolved] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [activeContact, setActiveContact] = useState<TrustedContact | undefined>(initialContact);
+  const [alertDispatched, setAlertDispatched] = useState(false);
+
+  // Sync latest saved contacts from Supabase/Share ETA
+  useEffect(() => {
+    if (!initialContact) {
+      fetchEmergencyContacts().then(contacts => {
+        if (contacts && contacts.length > 0) {
+          setActiveContact(contacts[0]);
+        }
+      });
+    } else {
+      setActiveContact(initialContact);
+    }
+  }, [initialContact]);
 
   useEffect(() => {
     if (isOpenDirectly) {
       setIsOpen(true);
+      setIsCountdownActive(true);
+      setCountdown(5);
       setIsResolved(false);
+      setAlertDispatched(false);
     }
   }, [isOpenDirectly]);
+
+  // 5-second Countdown Interval
+  useEffect(() => {
+    let timer: any;
+    if (isOpen && isCountdownActive && countdown > 0) {
+      timer = setInterval(() => {
+        setCountdown((prev) => prev - 1);
+      }, 1000);
+    } else if (isOpen && isCountdownActive && countdown === 0) {
+      triggerEmergencyDispatch();
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [isOpen, isCountdownActive, countdown]);
 
   const handleOpenSOS = () => {
     if (isDragging) return;
     setIsOpen(true);
+    setIsCountdownActive(true);
+    setCountdown(5);
     setIsResolved(false);
     setIsLocationSharingActive(true);
+    setAlertDispatched(false);
+  };
+
+  const handleCancelCountdown = () => {
+    setIsCountdownActive(false);
+    setIsOpen(false);
+    if (onCloseDirectly) onCloseDirectly();
+  };
+
+  const triggerEmergencyDispatch = () => {
+    setIsCountdownActive(false);
+    setAlertDispatched(true);
+    setIsLocationSharingActive(true);
+
+    // Prepare and dispatch emergency alert with live GPS and active journey
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          sendAlertMessage(pos.coords.latitude, pos.coords.longitude);
+        },
+        () => {
+          sendAlertMessage();
+        },
+        { enableHighAccuracy: true, timeout: 5000 }
+      );
+    } else {
+      sendAlertMessage();
+    }
+  };
+
+  const sendAlertMessage = (lat?: number, lng?: number) => {
+    const contactPhone = activeContact?.phone || '';
+    if (!contactPhone) return;
+
+    let cleanPhone = contactPhone.replace(/[\s\-\(\)]/g, '');
+    if (!cleanPhone.startsWith('+') && !cleanPhone.startsWith('91')) {
+      cleanPhone = '91' + cleanPhone;
+    } else if (cleanPhone.startsWith('+')) {
+      cleanPhone = cleanPhone.substring(1);
+    }
+
+    const locText = lat && lng ? `https://www.google.com/maps?q=${lat},${lng}` : 'GPS Location fetching...';
+    const journeyText = activeJourneyInfo ? `\n🚗 Active Journey: ${activeJourneyInfo.origin} → ${activeJourneyInfo.destination}` : '';
+    const alertMsg = `🚨 EMERGENCY SOS ALERT FROM SAAHAT!\n\nI need immediate assistance!\n📍 Location: ${locText}\n⏱️ Time: ${new Date().toLocaleTimeString()}${journeyText}\n\n🚨 Please call emergency services (112) or call me immediately.`;
+
+    const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(alertMsg)}`;
+    window.open(waUrl, '_blank');
   };
 
   const handleCloseSOS = () => {
     setIsOpen(false);
+    setIsCountdownActive(false);
     if (onCloseDirectly) onCloseDirectly();
   };
 
@@ -51,6 +148,7 @@ export const SOSModal: React.FC<SOSModalProps> = ({
     setTimeout(() => {
       setIsOpen(false);
       setIsResolved(false);
+      setIsCountdownActive(false);
       if (onCloseDirectly) onCloseDirectly();
     }, 2200);
   };
@@ -115,8 +213,64 @@ export const SOSModal: React.FC<SOSModalProps> = ({
                 </button>
               </div>
 
-              {!isResolved ? (
+              {isCountdownActive ? (
+                <div className="py-4 text-center space-y-5">
+                  <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-rose-500/20 text-rose-300 text-xs font-black border border-rose-500/40 animate-pulse">
+                    <AlertTriangle className="w-4 h-4 text-amber-300" />
+                    <span>Confirming Emergency Activation</span>
+                  </div>
+
+                  <div className="relative w-28 h-28 mx-auto flex items-center justify-center">
+                    <svg className="w-full h-full transform -rotate-90">
+                      <circle cx="56" cy="56" r="48" stroke="currentColor" strokeWidth="6" className="text-slate-800" fill="transparent" />
+                      <circle 
+                        cx="56" 
+                        cy="56" 
+                        r="48" 
+                        stroke="currentColor" 
+                        strokeWidth="6" 
+                        className="text-rose-500 transition-all duration-1000" 
+                        fill="transparent" 
+                        strokeDasharray={301.6} 
+                        strokeDashoffset={301.6 * (1 - countdown / 5)} 
+                      />
+                    </svg>
+                    <span className="absolute text-5xl font-black text-white tracking-tight">{countdown}</span>
+                  </div>
+
+                  <div className="space-y-1.5 max-w-sm mx-auto">
+                    <h3 className="text-xl sm:text-2xl font-black text-white">
+                      Initiating Emergency Alert
+                    </h3>
+                    <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                      Sending your live GPS location & route info to <strong className="text-pink-300">{activeContact?.name || 'Trusted Contact'}</strong> in {countdown}s.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
+                    <button
+                      onClick={handleCancelCountdown}
+                      className="w-full sm:flex-1 py-3.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs border border-slate-700 transition-all shadow-md"
+                    >
+                      Cancel Alert
+                    </button>
+                    <button
+                      onClick={triggerEmergencyDispatch}
+                      className="w-full sm:flex-1 py-3.5 rounded-2xl bg-gradient-to-r from-rose-600 via-red-600 to-pink-600 text-white font-black text-xs shadow-xl shadow-rose-600/40 hover:scale-105 active:scale-95 transition-all"
+                    >
+                      Send Alert Now
+                    </button>
+                  </div>
+                </div>
+              ) : !isResolved ? (
                 <>
+                  {alertDispatched && activeContact && (
+                    <div className="p-3 rounded-2xl bg-rose-950/80 border border-rose-700 text-xs text-rose-200 flex items-center justify-between">
+                      <span>🚨 Emergency alert sent to <strong>{activeContact.name}</strong> ({activeContact.phone})</span>
+                      <span className="text-[10px] font-bold bg-rose-800 text-white px-2 py-0.5 rounded">Dispatched</span>
+                    </div>
+                  )}
+
                   <div className="space-y-2 text-center sm:text-left">
                     <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-950/80 text-rose-300 text-xs font-bold border border-rose-800/60">
                       <ShieldAlert className="w-4 h-4 text-rose-400" />
@@ -177,16 +331,16 @@ export const SOSModal: React.FC<SOSModalProps> = ({
                   {/* One-Tap Emergency Options */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <button
-                      onClick={() => triggerCallSimulation(trustedContact ? trustedContact.name : 'Emergency Helpline (112)')}
+                      onClick={() => triggerCallSimulation(activeContact ? activeContact.name : 'Emergency Helpline (112)')}
                       className="p-4 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-left transition-all group"
                     >
                       <Phone className="w-5 h-5 text-pink-400 mb-2 group-hover:scale-110 transition-transform" />
                       <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Call Primary Contact</span>
                       <strong className="text-sm font-bold text-white block truncate">
-                        {trustedContact ? trustedContact.name : 'Emergency Helpline'}
+                        {activeContact ? activeContact.name : 'Emergency Helpline'}
                       </strong>
                       <span className="text-[11px] text-slate-400 block">
-                        {trustedContact ? trustedContact.phone : '112 / Police'}
+                        {activeContact ? activeContact.phone : '112 / Police'}
                       </span>
                     </button>
 
@@ -211,6 +365,31 @@ export const SOSModal: React.FC<SOSModalProps> = ({
                         </span>
                       </div>
                     </div>
+                  </div>
+
+                  {/* Discreet Alternative: Ring Me Tool */}
+                  <div className="p-3.5 rounded-2xl bg-gradient-to-r from-purple-950/60 to-slate-900 border border-indigo-500/30 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-indigo-500/20 text-indigo-300 flex items-center justify-center shrink-0">
+                        <PhoneCall className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <strong className="text-xs font-bold text-white block">Need a discreet excuse to leave?</strong>
+                        <span className="text-[10px] text-indigo-200 block">Trigger Ring Me (Simulated • No dispatch)</span>
+                      </div>
+                    </div>
+
+                    <button
+                      id="sos-trigger-ring-me"
+                      onClick={() => {
+                        handleCloseSOS();
+                        const fn = onTriggerRingMe || onTriggerFakeCall;
+                        if (fn) fn();
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md transition-all shrink-0"
+                    >
+                      Ring Me
+                    </button>
                   </div>
 
                   <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-[11px] text-slate-400 flex items-center gap-2">
